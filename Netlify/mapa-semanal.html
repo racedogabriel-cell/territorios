@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Territorios — Mapa semanal</title>
-<!-- Vista publica (solo lectura). Geometria: mapa.svg, mapa_meta.json. Estado: Supabase/datos_semana.mapaSemanal -->
+<!-- Vista publica (solo lectura). Geometria: mapa.svg, mapa_meta.json. Estado: Google Sheets/datos_semana.mapaSemanal -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
 :root{--calle:#e8eaed;--fondo:#f8f9fa;--panel:#fff;--texto:#3c4043}
@@ -53,7 +53,7 @@ header h1{font-size:15px;margin:0;font-weight:600;color:#202124}
 <header>
   <h1>Mapa semanal de territorios</h1>
   <span id="lblActualizado" class="actualizado sin-datos">Sin datos publicados</span>
-  <button type="button" id="btnActualizar" class="btn-top" title="Recargar desde Supabase">Actualizar</button>
+  <button type="button" id="btnActualizar" class="btn-top" title="Recargar desde Google Sheets">Actualizar</button>
   <div class="control-opacidad" id="wrapOpacidad" title="Opacidad del satélite">
     <span>Satélite</span>
     <input id="satOpacity" type="range" min="0" max="100" step="5" value="35">
@@ -71,9 +71,9 @@ header h1{font-size:15px;margin:0;font-weight:600;color:#202124}
   </aside>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="./supabase.js"></script>
+<script src="./google.js"></script>
 <script>
-/* Motor de mapa alineado con mapa.html — solo lectura; estado solo desde Supabase */
+/* Motor de mapa alineado con mapa.html — solo lectura; estado solo desde Google Sheets */
 const ESCALA=[{min:-15,max:27,color:'#F2F2F2',label:'1 a 27 días'},{min:28,max:55,color:'#E0F7FA',label:'28 a 55 días'},{min:56,max:62,color:'#4DD0E1',label:'56 a 62 días'},{min:63,max:69,color:'#2196F3',label:'63 a 69 días'},{min:70,max:76,color:'#0D47A1',label:'70 a 76 días'},{min:77,max:83,color:'#C6FF00',label:'77 a 83 días'},{min:84,max:90,color:'#2E7D32',label:'84 a 90 días'},{min:91,max:97,color:'#FFEB3B',label:'91 a 97 días'},{min:98,max:104,color:'#FF9800',label:'98 a 104 días'},{min:105,max:111,color:'#E65100',label:'105 a 111 días'},{min:112,max:118,color:'#6200EA',label:'112 a 118 días'},{min:119,max:Infinity,color:'#000000',label:'≥ 119 días'}];
 const COLOR_INCOMPLETO='#ff3a99',COLOR_CAMPANA='#ffff00',COLOR_SIN_DATOS='#eeeeee',COLOR_ASIGNADO_DESTACADO='#d32f2f';
 const AJUSTE_GRUPOS_INFO={arriba:{nombre:'Arriba'},abajo:{nombre:'Abajo'}};
@@ -238,16 +238,16 @@ function actualizarEtiquetaFecha(iso){
   if(exportado){
     const f=parseFecha(exportado);
     el.textContent=f
-      ?'Actualizado: '+f.toLocaleString('es-AR',{dateStyle:'medium',timeStyle:'short'})+' · '+n+' territorios · Supabase'
-      :'Actualizado: '+exportado+' · '+n+' territorios · Supabase';
+      ?'Actualizado: '+f.toLocaleString('es-AR',{dateStyle:'medium',timeStyle:'short'})+' · '+n+' territorios · Google Sheets'
+      :'Actualizado: '+exportado+' · '+n+' territorios · Google Sheets';
   }else{
-    el.textContent='Datos de '+n+' territorios (sin fecha exportado) · Supabase';
+    el.textContent='Datos de '+n+' territorios (sin fecha exportado) · Google Sheets';
   }
   el.classList.remove('sin-datos');
 }
 function aplicarEstadoSemanal(raw){
   const snapshot=normalizarSnapshotEstado(raw);
-  if(!snapshot)throw new Error('mapaSemanal en Supabase invalido o vacio');
+  if(!snapshot)throw new Error('mapaSemanal en Google Sheets invalido o vacio');
   console.log('Snapshot cargado:',snapshot);
   EXPORTADO_ISO=extraerExportadoSnapshot(snapshot);
   DATOS=territoriosDesdeSnapshot(snapshot)||{};
@@ -257,7 +257,7 @@ function aplicarEstadoSemanal(raw){
   AJUSTE_GLOBAL={groups:null,compat:null,boundsBase:null,centroBloqueRef:null};
   if(snapshot.ajusteGlobal){
     if(snapshot.ajusteGlobal.groups&&!snapshot.ajusteGlobal.boundsBase){
-      console.warn('[mapa-semanal] El snapshot no incluye boundsBase. Exportá de nuevo con Enviar a Supabase en mapa.html para corregir el alineado.');
+      console.warn('[mapa-semanal] El snapshot no incluye boundsBase. Exportá de nuevo con Enviar a Google en mapa.html para corregir el alineado.');
     }
     aplicarValorAjusteGlobal(snapshot.ajusteGlobal);
   }
@@ -265,14 +265,14 @@ function aplicarEstadoSemanal(raw){
     ?snapshot.referencias.map((x)=>({id:String(x.id||''),lat:Number(x.lat),lon:Number(x.lon)})).filter((x)=>Number.isFinite(x.lat)&&Number.isFinite(x.lon))
     :[];
 }
-async function cargarEstadoDesdeSupabase(){
-  if(!window.TerritoriosSupabase||typeof window.TerritoriosSupabase.cargarDatosSemana!=='function'){
-    throw new Error('Modulo Supabase no cargado (supabase.js).');
+async function cargarEstadoDesdeGoogle(){
+  if(!window.TerritoriosGoogle||typeof window.TerritoriosGoogle.cargarDatosSemana!=='function'){
+    throw new Error('Modulo Google no cargado (google.js).');
   }
-  const bundle=await window.TerritoriosSupabase.cargarDatosSemana();
+  const bundle=await window.TerritoriosGoogle.cargarDatosSemana();
   const snap=bundle&&bundle.mapaSemanal;
   if(!snap||typeof snap!=='object'||!snap.territorios){
-    throw new Error('El paquete en Supabase no incluye mapaSemanal. En mapa.html usá Enviar a Supabase de nuevo.');
+    throw new Error('El paquete en Google Sheets no incluye mapaSemanal. En mapa.html usá Enviar a Google de nuevo.');
   }
   return snap;
 }
@@ -283,7 +283,7 @@ async function cargarMapaSemanal(){
   const [svgTxt,metaJson,estadoRaw]=await Promise.all([
     fetch('mapa.svg',{cache:'no-store'}).then((r)=>{if(!r.ok)throw new Error('No se pudo cargar mapa.svg (HTTP '+r.status+')');return r.text()}),
     fetch('mapa_meta.json',{cache:'no-store'}).then((r)=>{if(!r.ok)throw new Error('No se pudo cargar mapa_meta.json (HTTP '+r.status+')');return r.json()}),
-    cargarEstadoDesdeSupabase()
+    cargarEstadoDesdeGoogle()
   ]);
   META=normalizarMeta(metaJson);
   aplicarEstadoSemanal(estadoRaw);

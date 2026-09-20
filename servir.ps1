@@ -376,7 +376,7 @@ function Update-SalidaBundleRowAccess {
 }
 
 <#
- Aplica filas de salidas del bundle publicado en Supabase (datos_semana) sobre NumeroDeTerritorios.
+ Aplica filas de salidas del bundle publicado en Google Sheets (datos_semana) sobre NumeroDeTerritorios.
  Solo actualiza territorios que ya existen en la base. No elimina salidas locales omitidas del bundle.
 #>
 function Sync-SalidasBundleToAccess {
@@ -443,7 +443,7 @@ function Sync-SalidasBundleToAccess {
 
                 $n = Update-SalidaBundleRowAccess -con $con -numNorm $num -pto $pto -gr $gr -resp $resp -envDt $envDt -priVal $priVal -manz $manz
                 if ($n -lt 1) {
-                    [void]$fallos.Add("Territorio $num : no encontrado en la base (revisá NumeroTerritorio en Access vs Supabase)")
+                    [void]$fallos.Add("Territorio $num : no encontrado en la base (revisá NumeroTerritorio en Access vs Google Sheets)")
                 }
                 else {
                     $aplicados++

@@ -266,11 +266,11 @@ function aplicarEstadoSemanal(raw){
     ?snapshot.referencias.map((x)=>({id:String(x.id||''),lat:Number(x.lat),lon:Number(x.lon)})).filter((x)=>Number.isFinite(x.lat)&&Number.isFinite(x.lon))
     :[];
 }
-async function cargarEstadoDesdeSupabase(){
-  if(!window.TerritoriosSupabase||typeof window.TerritoriosSupabase.cargarDatosSemana!=='function'){
-    throw new Error('Modulo Google no cargado (supabase.js).');
+async function cargarEstadoDesdeGoogle(){
+  if(!window.TerritoriosGoogle||typeof window.TerritoriosGoogle.cargarDatosSemana!=='function'){
+    throw new Error('Modulo Google no cargado (google.js).');
   }
-  const bundle=await window.TerritoriosSupabase.cargarDatosSemana();
+  const bundle=await window.TerritoriosGoogle.cargarDatosSemana();
   const snap=bundle&&bundle.mapaSemanal;
   if(!snap||typeof snap!=='object'||!snap.territorios){
     throw new Error('El paquete en Google Sheets no incluye mapaSemanal. En mapa.html usá Enviar a Google de nuevo.');
@@ -284,7 +284,7 @@ async function cargarMapaSemanal(){
   const [svgTxt,metaJson,estadoRaw]=await Promise.all([
     fetch('mapa.svg',{cache:'no-store'}).then((r)=>{if(!r.ok)throw new Error('No se pudo cargar mapa.svg (HTTP '+r.status+')');return r.text()}),
     fetch('mapa_meta.json',{cache:'no-store'}).then((r)=>{if(!r.ok)throw new Error('No se pudo cargar mapa_meta.json (HTTP '+r.status+')');return r.json()}),
-    cargarEstadoDesdeSupabase()
+    cargarEstadoDesdeGoogle()
   ]);
   META=normalizarMeta(metaJson);
   aplicarEstadoSemanal(estadoRaw);

@@ -84,11 +84,9 @@ En el repositorio: **Settings → Pages**:
 
 La URL queda:
 
-`https://TU_USUARIO.github.io/territorios/`
+`https://racedogabriel-cell.github.io/territorios/`
 
 ## 5. Acciones de colaboradores → Access
-
-Igual que con Supabase, pero contra Google:
 
 ```powershell
 .\servir.ps1
@@ -103,5 +101,3 @@ Igual que con Supabase, pero contra Google:
 | `salidas` | Una fila por territorio asignado |
 | `mapa_territorios` | Estado del mapa semanal (un territorio por fila) |
 | `acciones` | Cola de cierres/ajustes pendientes |
-
-Netlify y Supabase siguen funcionando; este canal es paralelo.

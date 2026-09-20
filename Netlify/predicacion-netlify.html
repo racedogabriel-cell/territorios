@@ -199,7 +199,7 @@
             <button type="button" class="btn btn-primary" id="btn-refresh">Actualizar</button>
             <button type="button" class="btn btn-secondary" id="btn-agregados">Agregados</button>
         </div>
-        <p class="hint" id="hint-text">Cargando desde <code>Supabase</code>…</p>
+        <p class="hint" id="hint-text">Cargando desde <code>Google Sheets</code>…</p>
     </div>
 </div>
 
@@ -215,7 +215,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./supabase.js"></script>
+<script src="./google.js"></script>
 <script>
     const root = document.getElementById('root');
     const headerText = document.getElementById('header-text');
@@ -236,7 +236,7 @@
     let tmAjusteSalida = null;
     const descripcionPorNumeroMemo = {};
 
-    /** Respaldo si el snapshot de Supabase aún no trae Descripcion (hasta re-publicar). */
+    /** Respaldo si el snapshot de Google Sheets aún no trae Descripcion (hasta re-publicar). */
     const FALLBACK_DESCRIPCIONES_PUEBLO = {
         '200': 'Cadret',
         '201': 'Algarrobo',
@@ -255,7 +255,7 @@
     let tmMiniMapaLayer = null;
 
     /** Ultima lectura de acciones_colaboradores con procesado=false (una fila por territorio, la mas reciente por creado_en). */
-    let pendientesSupabasePorNumero = new Map();
+    let pendientesNubePorNumero = new Map();
 
     const TIPOS_PENDIENTE_VISTA = new Set([
         'cerrar-sin-hecho',
@@ -270,7 +270,7 @@
 
     function mapaPendientesEfectivo() {
         const map = new Map();
-        for (const [num, row] of pendientesSupabasePorNumero) {
+        for (const [num, row] of pendientesNubePorNumero) {
             map.set(num, { row });
         }
         return map;
@@ -284,7 +284,7 @@
         return ent && ent.row ? ent.row.tipo : '';
     }
 
-    function idSupabasePendienteParaNumero(numero) {
+    function idPendienteParaNumero(numero) {
         const ent = mapaPendientesEfectivo().get(String(numero).trim());
         if (!ent || !ent.row) return null;
         const id = ent.row.id;
@@ -299,25 +299,25 @@
         return a || 'Acción';
     }
 
-    async function refrescarPendientesSiSupabase() {
-        pendientesSupabasePorNumero = new Map();
-        if (!window.TerritoriosSupabase || typeof window.TerritoriosSupabase.listarAccionesPendientes !== 'function') {
+    async function refrescarPendientesNube() {
+        pendientesNubePorNumero = new Map();
+        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.listarAccionesPendientes !== 'function') {
             return;
         }
         try {
-            const rows = await window.TerritoriosSupabase.listarAccionesPendientes();
+            const rows = await window.TerritoriosGoogle.listarAccionesPendientes();
             if (!Array.isArray(rows)) return;
             for (const row of rows) {
                 if (!row || !tipoPendienteAfectaVista(row.tipo)) continue;
                 const num = String((row.payload && row.payload.numero) || '').trim();
                 if (!num) continue;
-                const prev = pendientesSupabasePorNumero.get(num);
+                const prev = pendientesNubePorNumero.get(num);
                 const tNew = row.creado_en ? new Date(row.creado_en).getTime() : 0;
                 const tPrev = prev && prev.creado_en ? new Date(prev.creado_en).getTime() : -1;
-                if (!prev || tNew >= tPrev) pendientesSupabasePorNumero.set(num, row);
+                if (!prev || tNew >= tPrev) pendientesNubePorNumero.set(num, row);
             }
         } catch (err) {
-            console.warn('No se pudieron cargar acciones pendientes en Supabase:', err);
+            console.warn('No se pudieron cargar acciones pendientes en Google Sheets:', err);
         }
     }
 
@@ -407,12 +407,12 @@
         else if (tipo === 'guardar-edicion-salida') cabezas.push('Hay un <strong>ajuste de salida</strong> guardado como pendiente.');
         else if (tipo === 'agregado-accion') cabezas.push('Hay un <strong>agregado manual</strong> pendiente.');
         cabezas.push(
-            'Estado en <strong>Supabase</strong> (aún no aplicado en Access). Podés modificar la acción o eliminarla antes de ejecutar <code>Sync-SupabaseToAccess.ps1</code>.'
+            'Estado en <strong>Google Sheets</strong> (aún no aplicado en Access). Podés modificar la acción o eliminarla antes de ejecutar <code>Sync-GoogleToAccess.ps1</code>.'
         );
         let btn = '';
         if (ent.row && ent.row.id != null) {
             btn =
-                '<button type="button" class="modal-btn modal-btn-red" id="tm-eliminar-pendiente">Eliminar pendiente en Supabase</button>';
+                '<button type="button" class="modal-btn modal-btn-red" id="tm-eliminar-pendiente">Eliminar pendiente en Google Sheets</button>';
         }
         return (
             '<div class="tm-pendiente-banner" id="tm-pendiente-banner">' +
@@ -424,46 +424,46 @@
     }
 
     async function eliminarPendienteTerritorioActual() {
-        const supa = window.TerritoriosSupabase;
+        const nube = window.TerritoriosGoogle;
         if (!supa) {
-            throw new Error('Módulo Supabase no cargado.');
+            throw new Error('Módulo Google no cargado.');
         }
         const num = String(territorioSeleccionado || '').trim();
         if (!num) {
             throw new Error('Territorio no seleccionado.');
         }
-        const id = idSupabasePendienteParaNumero(num);
-        if (typeof supa.eliminarAccionesPendientesPorNumero === 'function') {
+        const id = idPendienteParaNumero(num);
+        if (typeof nube.eliminarAccionesPendientesPorNumero === 'function') {
             try {
-                await supa.eliminarAccionesPendientesPorNumero(num);
+                await nube.eliminarAccionesPendientesPorNumero(num);
                 return;
             } catch (errPorNumero) {
-                if (!id || typeof supa.eliminarAccion !== 'function') throw errPorNumero;
+                if (!id || typeof nube.eliminarAccion !== 'function') throw errPorNumero;
                 const msg = String(errPorNumero && errPorNumero.message ? errPorNumero.message : errPorNumero);
                 if (!/No se eliminó ninguna/i.test(msg)) throw errPorNumero;
             }
         }
-        if (!id || typeof supa.eliminarAccion !== 'function') {
+        if (!id || typeof nube.eliminarAccion !== 'function') {
             throw new Error('No hay acción pendiente identificada para este territorio.');
         }
-        await supa.eliminarAccion(id);
+        await nube.eliminarAccion(id);
     }
 
     function adjuntarEliminarPendienteSiCorresponde() {
         const btnDel = document.getElementById('tm-eliminar-pendiente');
         if (!btnDel) return;
         btnDel.addEventListener('click', async () => {
-            if (!window.TerritoriosSupabase) {
-                tmError.textContent = 'Error: módulo Supabase no cargado.';
+            if (!window.TerritoriosGoogle) {
+                tmError.textContent = 'Error: módulo Google no cargado.';
                 return;
             }
-            if (!confirm('¿Eliminar esta acción pendiente en Supabase? El territorio volverá a mostrarse como antes en esta vista.')) return;
+            if (!confirm('¿Eliminar esta acción pendiente en Google Sheets? El territorio volverá a mostrarse como antes en esta vista.')) return;
             tmError.textContent = '';
             tmError.classList.remove('modal-msg-ok');
             btnDel.disabled = true;
             try {
                 await eliminarPendienteTerritorioActual();
-                await refrescarPendientesSiSupabase();
+                await refrescarPendientesNube();
                 renderDesdeSalidas();
                 cerrarModalTerritorio();
             } catch (e) {
@@ -708,34 +708,34 @@
         renderLista(aplicarPendientesAParseRows(parseRows(filasSalidasParaVista())));
     }
 
-    function esErrorSupabaseDatos(err) {
+    function esErrorDatosNube(err) {
         const msg = String(err && err.message ? err.message : err);
-        return msg.includes('SUPABASE_SIN_DATOS') ||
-            msg.includes('SUPABASE_CONFIG') ||
+        return msg.includes('GOOGLE_SIN_DATOS') ||
+            msg.includes('GOOGLE_CONFIG') ||
             /datos_semana/i.test(msg);
     }
 
-    function mostrarEstadoSinDatosSupabase() {
-        headerText.textContent = 'Sin datos en Supabase';
+    function mostrarEstadoSinDatosNube() {
+        headerText.textContent = 'Sin datos en Google Sheets';
         root.innerHTML =
             '<div class="empty">' +
             '<strong>No hay salidas publicadas.</strong><br><br>' +
             'La tabla <code>datos_semana</code> está vacía o el JSON no trae filas en <code>salidas</code>.<br><br>' +
-            '1. En Supabase → SQL Editor ejecutá <code>sql/create_tables.sql</code><br>' +
-            '2. Desde <code>mapa.html</code> (PC) usá <strong>Enviar a Supabase</strong>.<br>' +
+            '1. Configurá la hoja y Apps Script (ver <code>GITHUB_PAGES.md</code>)<br>' +
+            '2. Desde <code>mapa.html</code> (PC) usá <strong>Enviar a Google</strong>.<br>' +
             '3. Pulsá <strong>Actualizar</strong> en esta página.' +
             '</div>';
         hintText.innerHTML =
-            'Publicá datos en <code>datos_semana</code> desde la PC (mapa: <strong>Enviar a Supabase</strong>) y pulsá <strong>Actualizar</strong>.';
+            'Publicá datos en <code>datos_semana</code> desde la PC (mapa: <strong>Enviar a Google</strong>) y pulsá <strong>Actualizar</strong>.';
     }
 
-    function mostrarErrorSupabase(err) {
+    function mostrarErrorNube(err) {
         headerText.textContent = 'Salidas de predicación';
         const msg = escapeHtml(String(err && err.message ? err.message : err));
         root.innerHTML =
             '<div class="error-msg">' + msg + '</div>';
         hintText.innerHTML =
-            'Revisá <code>Netlify/supabase.js</code> (URL y ANON KEY) y las políticas RLS. Ver <code>SUPABASE.md</code>.';
+            'Revisá <code>google/google.js</code> (APPS_SCRIPT_URL o SPREADSHEET_ID + API_KEY). Ver <code>GITHUB_PAGES.md</code>.';
     }
 
     function ordenarSalidasRows() {
@@ -778,7 +778,7 @@
 
     async function aplicarAccion(tipo, payload, opts) {
         opts = opts || {};
-        const reemplazarId = opts.reemplazarSupabaseId;
+        const reemplazarId = opts.reemplazarPendienteId;
         const online = await apiFunciona();
         if (online) {
             if (tipo === 'cerrar-sin-hecho') await postApi('/api/territorios/cerrar-sin-hecho', payload);
@@ -788,27 +788,27 @@
             else throw new Error('Tipo ' + tipo);
             return 'api';
         }
-        const supa = window.TerritoriosSupabase;
-        if (!supa || typeof supa.guardarAccion !== 'function') {
-            throw new Error('Sin servidor local (/api) ni módulo Supabase para guardar la acción.');
+        const nube = window.TerritoriosGoogle;
+        if (!supa || typeof nube.guardarAccion !== 'function') {
+            throw new Error('Sin servidor local (/api) ni módulo Google para guardar la acción.');
         }
-        if (reemplazarId != null && typeof supa.actualizarAccion === 'function') {
+        if (reemplazarId != null && typeof nube.actualizarAccion === 'function') {
             try {
-                await supa.actualizarAccion(reemplazarId, tipo, payload);
-                await refrescarPendientesSiSupabase();
-                return 'supabase';
+                await nube.actualizarAccion(reemplazarId, tipo, payload);
+                await refrescarPendientesNube();
+                return 'google';
             } catch (err) {
                 const msg = err && err.message ? err.message : String(err);
-                throw new Error('No se pudo actualizar la acción en Supabase: ' + msg);
+                throw new Error('No se pudo actualizar la acción en Google Sheets: ' + msg);
             }
         }
         try {
-            await supa.guardarAccion(tipo, payload);
-            await refrescarPendientesSiSupabase();
-            return 'supabase';
+            await nube.guardarAccion(tipo, payload);
+            await refrescarPendientesNube();
+            return 'google';
         } catch (err) {
             const msg = err && err.message ? err.message : String(err);
-            throw new Error('No se pudo guardar en Supabase: ' + msg);
+            throw new Error('No se pudo guardar en Google Sheets: ' + msg);
         }
     }
 
@@ -853,11 +853,11 @@
             return;
         }
         try {
-            const rid = idSupabasePendienteParaNumero(territorioSeleccionado);
+            const rid = idPendienteParaNumero(territorioSeleccionado);
             const modo = await aplicarAccion(
                 'guardar-edicion-salida',
                 { numero: territorioSeleccionado, ...flex },
-                { reemplazarSupabaseId: rid }
+                { reemplazarPendienteId: rid }
             );
             tmSalidaCtxPersisted = { ...tmAjusteSalida };
             if (modo === 'api') {
@@ -871,7 +871,7 @@
                 renderDesdeSalidas();
             }
             tmError.classList.add('modal-msg-ok');
-            tmError.textContent = modo === 'api' ? 'Cambios guardados.' : 'Cambios guardados en Supabase.';
+            tmError.textContent = modo === 'api' ? 'Cambios guardados.' : 'Cambios guardados en Google Sheets.';
         } catch (err) {
             tmError.textContent = 'Error: ' + err.message;
         }
@@ -1119,11 +1119,11 @@
         if (accion === 'incompleto' && !manzanasPendientes) { tmError.textContent = 'Ingresá manzanas pendientes para incompleto.'; return; }
         tmError.textContent = '';
         try {
-            const rid = idSupabasePendienteParaNumero(numero);
+            const rid = idPendienteParaNumero(numero);
             const modo = await aplicarAccion(
                 'agregado-accion',
                 { numero, fecha, responsable, accion, manzanasPendientes },
-                { reemplazarSupabaseId: rid }
+                { reemplazarPendienteId: rid }
             );
             if (modo === 'api') {
                 cerrarModalTerritorio();
@@ -1132,7 +1132,7 @@
                 cerrarModalTerritorio();
                 renderDesdeSalidas();
                 hintText.innerHTML =
-                    'Accion guardada en <strong>Supabase</strong>. En la PC principal ejecutá <code>Sync-SupabaseToAccess.ps1</code> para pasarla a Access.';
+                    'Accion guardada en <strong>Google Sheets</strong>. En la PC principal ejecutá <code>Sync-GoogleToAccess.ps1</code> para pasarla a Access.';
             }
         } catch (err) {
             tmError.textContent = 'Error: ' + err.message;
@@ -1817,14 +1817,14 @@
             tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
         }
         const ajustePayload = construirPayloadAjusteSalida();
-        const rid = idSupabasePendienteParaNumero(territorioSeleccionado);
+        const rid = idPendienteParaNumero(territorioSeleccionado);
         try {
             let modo;
             if (tipo === 'sin-hacer') {
                 modo = await aplicarAccion(
                     'cerrar-sin-hecho',
                     { numero: territorioSeleccionado, ...ajustePayload },
-                    { reemplazarSupabaseId: rid }
+                    { reemplazarPendienteId: rid }
                 );
             } else {
                 modo = await aplicarAccion(
@@ -1835,7 +1835,7 @@
                         manzanasPendientes: manzanasPendientes || '',
                         ...ajustePayload
                     },
-                    { reemplazarSupabaseId: rid }
+                    { reemplazarPendienteId: rid }
                 );
             }
             cerrarModalTerritorio();
@@ -1844,7 +1844,7 @@
             } else {
                 renderDesdeSalidas();
                 hintText.innerHTML =
-                    'Sin servidor local: acción guardada en <strong>Supabase</strong>. El territorio se muestra como informado hasta que se publique de nuevo en <code>datos_semana</code> o ejecutés <code>Sync-SupabaseToAccess.ps1</code>.';
+                    'Sin servidor local: acción guardada en <strong>Google Sheets</strong>. El territorio se muestra como informado hasta que se publique de nuevo en <code>datos_semana</code> o ejecutés <code>Sync-GoogleToAccess.ps1</code>.';
             }
         } catch (err) {
             tmError.textContent = 'Error: ' + err.message;
@@ -1864,7 +1864,7 @@
 
     async function recargarDatosPreferApi() {
         if (!esEntornoLocal()) {
-            await cargarDesdeSupabase(false);
+            await cargarDesdeGoogle(false);
             return;
         }
         if (await apiFunciona()) {
@@ -1872,24 +1872,24 @@
             if (r.ok) {
                 salidasRows = await r.json();
                 sembrarDescripcionesDesdeSalidas(salidasRows);
-                await refrescarPendientesSiSupabase();
+                await refrescarPendientesNube();
                 renderDesdeSalidas();
                 hintText.innerHTML = 'Datos desde <code>/api/salidas</code> (servidor local).';
                 return;
             }
         }
-        await cargarDesdeSupabase(false);
+        await cargarDesdeGoogle(false);
     }
 
-    async function cargarDesdeSupabase(showLoading) {
-        if (!window.TerritoriosSupabase || typeof window.TerritoriosSupabase.cargarDatosSemana !== 'function') {
-            throw new Error('Modulo Supabase no cargado.');
+    async function cargarDesdeGoogle(showLoading) {
+        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.cargarDatosSemana !== 'function') {
+            throw new Error('Modulo Google no cargado.');
         }
         if (showLoading !== false) {
-            hintText.innerHTML = 'Cargando desde <code>Supabase</code>...';
+            hintText.innerHTML = 'Cargando desde <code>Google Sheets</code>...';
             root.innerHTML = '<div class="empty">Cargando...</div>';
         }
-        const json = await window.TerritoriosSupabase.cargarDatosSemana();
+        const json = await window.TerritoriosGoogle.cargarDatosSemana();
         const bundle = normalizarBundle(json);
         salidasRows = Array.isArray(bundle.salidas) ? bundle.salidas.slice() : [];
         catalogoResponsables = bundle.responsables || [];
@@ -1897,26 +1897,26 @@
         catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO, bundle.descripciones || {});
         sembrarDescripcionesDesdeSalidas(salidasRows);
         tmAgregadosCache = null;
-        await refrescarPendientesSiSupabase();
+        await refrescarPendientesNube();
         if (!salidasRows.length && filasSalidasParaVista().length === 0) {
-            mostrarEstadoSinDatosSupabase();
+            mostrarEstadoSinDatosNube();
             return;
         }
         renderDesdeSalidas();
-        hintText.innerHTML = 'Vista desde <code>Supabase/datos_semana</code> (' + salidasRows.length + ' filas). Access sigue siendo la fuente principal.';
+        hintText.innerHTML = 'Vista desde <code>Google Sheets/datos_semana</code> (' + salidasRows.length + ' filas). Access sigue siendo la fuente principal.';
     }
 
     async function cargar() {
         try {
             await recargarDatosPreferApi();
         } catch (e) {
-            if (esErrorSupabaseDatos(e)) {
-                mostrarErrorSupabase(e);
+            if (esErrorDatosNube(e)) {
+                mostrarErrorNube(e);
                 return;
             }
             headerText.textContent = 'Salidas de predicación';
             root.innerHTML =
-                '<div class="error-msg">No se pudieron cargar los datos. Verificá la conexión y la configuración de Supabase.</div>';
+                '<div class="error-msg">No se pudieron cargar los datos. Verificá la conexión y la configuración de Google Sheets.</div>';
             hintText.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
         }
     }

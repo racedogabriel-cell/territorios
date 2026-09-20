@@ -179,9 +179,6 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
   <button id="btnSalidas" class="btn-top" type="button">Ver salidas</button>
   <button id="btnReferencias" class="btn-top" type="button">Referencias</button>
   <button id="btnLimpiarCampana" class="btn-top" type="button">Limpiar campaña</button>
-  <button id="btnRecibirSupabase" class="btn-top" type="button" title="Descarga datos_semana desde Supabase y aplica salidas en Access; luego importa acciones pendientes de colaboradores (Sin hacer, cierres, etc.), igual que Sync-SupabaseToAccess.ps1. Requiere servir.ps1 local.">Recibir de Supabase</button>
-  <button id="btnSyncSupabase" class="btn-top" type="button" title="Publica en Supabase el paquete semanal (salidas + mapaSemanal para mapa-semanal.html en Netlify). Requiere servir.ps1 y Supabase.">Enviar a Supabase</button>
-  <span id="syncSupabaseMsg" title="Estado de sincronizacion con Supabase" style="font-size:11px;font-weight:600;color:#5f6368;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
   <button id="btnRecibirGoogle" class="btn-top" type="button" title="Descarga el paquete semanal desde Google Sheets y aplica salidas en Access; luego importa acciones pendientes. Requiere servir.ps1 y google/google.js.">Recibir de Google</button>
   <button id="btnSyncGoogle" class="btn-top" type="button" title="Publica en Google Sheets el paquete semanal (salidas + mapaSemanal para GitHub Pages). Requiere servir.ps1 y Apps Script.">Enviar a Google</button>
   <span id="syncGoogleMsg" title="Estado de sincronizacion con Google Sheets" style="font-size:11px;font-weight:600;color:#5f6368;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -392,7 +389,6 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
   </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="Netlify/supabase.js"></script>
 <script src="google/google.js"></script>
 <script>
 const ESCALA=[{min:-15,max:27,color:'#F2F2F2',label:'1 a 27 días'},{min:28,max:55,color:'#E0F7FA',label:'28 a 55 días'},{min:56,max:62,color:'#4DD0E1',label:'56 a 62 días'},{min:63,max:69,color:'#2196F3',label:'63 a 69 días'},{min:70,max:76,color:'#0D47A1',label:'70 a 76 días'},{min:77,max:83,color:'#C6FF00',label:'77 a 83 días'},{min:84,max:90,color:'#2E7D32',label:'84 a 90 días'},{min:91,max:97,color:'#FFEB3B',label:'91 a 97 días'},{min:98,max:104,color:'#FF9800',label:'98 a 104 días'},{min:105,max:111,color:'#E65100',label:'105 a 111 días'},{min:112,max:118,color:'#6200EA',label:'112 a 118 días'},{min:119,max:Infinity,color:'#000000',label:'≥ 119 días'}];
@@ -1381,17 +1377,14 @@ async function abrirModalSatelital(numero){const keySel=String(numero).trim().re
 function cerrarModalSatelital(){document.getElementById('modalSatelital').classList.remove('abierto');if(CAPA_MODAL&&MAPA_MODAL){MAPA_MODAL.removeLayer(CAPA_MODAL);CAPA_MODAL=null}}
 function catalogoDesdeFormYTerrMapa(form,terr){const responsablesRaw=form?.responsables;const responsables=[];if(Array.isArray(responsablesRaw)){for(const item of responsablesRaw){const txt=String(item??'').trim();if(!txt)continue;const partes=txt.split(',').map((s)=>s.trim()).filter(Boolean);if(partes.length>1){for(const p of partes)responsables.push(p)}else{responsables.push(txt)}}}else if(typeof responsablesRaw==='string'){responsables.push(...responsablesRaw.split(',').map((s)=>s.trim()).filter(Boolean))}const responsablesUnicos=[...new Set(responsables)];const territorios=Array.isArray(terr)?terr.map((t)=>String(t?.numero||'').trim()).filter(Boolean):[];territorios.sort((a,b)=>Number(a)-Number(b));const descripciones={};if(Array.isArray(terr)){for(const t of terr){const num=String(t?.numero||'').trim();const desc=String(t?.descripcion??t?.Descripcion??'').trim();if(num&&desc)descripciones[num]=desc}}return{responsables:responsablesUnicos,territorios,descripciones}}
 async function armarBundleDatosSemanaMapa(){const[rSal,rForm,rTerr]=await Promise.all([fetch('/api/salidas',{cache:'no-store'}),fetch('/api/form-data',{cache:'no-store'}),fetch('/api/territorios',{cache:'no-store'})]);if(!rSal.ok)throw new Error('HTTP '+rSal.status+' en /api/salidas');if(!rForm.ok)throw new Error('HTTP '+rForm.status+' en /api/form-data');if(!rTerr.ok)throw new Error('HTTP '+rTerr.status+' en /api/territorios');const salidas=await rSal.json();const form=await rForm.json();const terr=await rTerr.json();const cat=catalogoDesdeFormYTerrMapa(form,terr);return{exportado:new Date().toISOString(),version:2,salidas,responsables:cat.responsables,territorios:cat.territorios,descripciones:cat.descripciones}}
-async function recibirDatosSemanaDesdeSupabase(){return recibirDatosSemanaDesdeNube('supabase')}
-async function recibirDatosSemanaDesdeGoogle(){return recibirDatosSemanaDesdeNube('google')}
-async function recibirDatosSemanaDesdeNube(fuente){
-  const esGoogle=fuente==='google';
-  const api=esGoogle?window.TerritoriosGoogle:window.TerritoriosSupabase;
-  const btn=document.getElementById(esGoogle?'btnRecibirGoogle':'btnRecibirSupabase');
-  const el=document.getElementById(esGoogle?'syncGoogleMsg':'syncSupabaseMsg');
-  const nombre=esGoogle?'Google Sheets':'Supabase';
+async function recibirDatosSemanaDesdeGoogle(){
+  const api=window.TerritoriosGoogle;
+  const btn=document.getElementById('btnRecibirGoogle');
+  const el=document.getElementById('syncGoogleMsg');
+  const nombre='Google Sheets';
   const prev=btn?btn.textContent:'';
   try{
-    if(!api||typeof api.cargarDatosSemana!=='function')throw new Error(esGoogle?'Cargá google/google.js y configurá APPS_SCRIPT_URL. Ver GITHUB_PAGES.md.':'Cargá Netlify/supabase.js y configurá SUPABASE_URL / SUPABASE_ANON_KEY.');
+    if(!api||typeof api.cargarDatosSemana!=='function')throw new Error('Cargá google/google.js y configurá APPS_SCRIPT_URL. Ver GITHUB_PAGES.md.');
     if(!origenEsAccessVivo()){alert('Recibir de '+nombre+' requiere servidor local con Access (debe figurar "Access (vivo)" arriba a la derecha).');return}
     if(btn)btn.disabled=true;
     if(el){el.textContent='Descargando de '+nombre+'...';el.style.color='#1a73e8'}
@@ -1426,11 +1419,11 @@ async function recibirDatosSemanaDesdeNube(fuente){
       if(lista.length>0){
         if(el)el.textContent='Aplicando '+lista.length+' acción(es) en Access...';
         const accionesPayload=lista.map((row)=>({tipo:String(row.tipo||''),payload:row.payload}));
-        const ri=await fetch('/api/importar-cierres-colaborador',{method:'POST',headers:{'Content-Type':'application/json;charset=UTF-8'},body:JSON.stringify({exportado:new Date().toISOString(),version:1,origen:esGoogle?'mapa-recibir-google':'mapa-recibir-supabase',acciones:accionesPayload}),cache:'no-store'});
+        const ri=await fetch('/api/importar-cierres-colaborador',{method:'POST',headers:{'Content-Type':'application/json;charset=UTF-8'},body:JSON.stringify({exportado:new Date().toISOString(),version:1,origen:'mapa-recibir-google',acciones:accionesPayload}),cache:'no-store'});
         const bi=await ri.json().catch(()=>({}));
         if(!ri.ok||bi.ok===false){
           importAccionesFallo=true;
-          alert('Datos semana aplicados, pero falló importar acciones desde '+nombre+' (Sin hacer / cierres):\n'+(bi.message||bi.error||('HTTP '+ri.status))+'\n\nLas acciones siguen pendientes. Podés reintentar o ejecutar '+(esGoogle?'Sync-GoogleToAccess.ps1':'Sync-SupabaseToAccess.ps1')+'.');
+          alert('Datos semana aplicados, pero falló importar acciones desde '+nombre+' (Sin hacer / cierres):\n'+(bi.message||bi.error||('HTTP '+ri.status))+'\n\nLas acciones siguen pendientes. Podés reintentar o ejecutar Sync-GoogleToAccess.ps1.');
         }else{
           accionesImportadas=lista.length;
           if(typeof api.marcarAccionProcesada==='function'){
@@ -1472,7 +1465,7 @@ async function recibirDatosSemanaDesdeNube(fuente){
     if(btn){btn.disabled=false;if(prev)btn.textContent=prev}
   }
 }
-/** Snapshot del mapa embebido en datos_semana.mapaSemanal (mapa-semanal.html en Netlify). */
+/** Snapshot del mapa embebido en datos_semana.mapaSemanal (mapa-semanal.html en GitHub Pages). */
 function exportarSnapshotMapaSemanal(){
   asegurarGruposAjuste();
   const territorios={};
@@ -1493,28 +1486,6 @@ function exportarSnapshotMapaSemanal(){
     referencias:REFERENCIAS.map((r)=>({id:r.id,lat:r.lat,lon:r.lon})),
     territorios
   };
-}
-async function sincronizarSupabaseDesdeMapa(){
-  const btn=document.getElementById('btnSyncSupabase');
-  const el=document.getElementById('syncSupabaseMsg');
-  const prev=btn?btn.textContent:'';
-  try{
-    if(!window.TerritoriosSupabase||typeof window.TerritoriosSupabase.upsertDatosSemana!=='function'){
-      throw new Error('Cargá Netlify/supabase.js y configurá SUPABASE_URL / SUPABASE_ANON_KEY.');
-    }
-    if(btn)btn.disabled=true;
-    if(el){el.textContent='Enviando...';el.style.color='#1a73e8'}
-    const bundle=await armarBundleDatosSemanaMapa();
-    bundle.mapaSemanal=exportarSnapshotMapaSemanal();
-    await window.TerritoriosSupabase.upsertDatosSemana(bundle);
-    if(el){el.textContent='Enviado a Supabase (salidas + mapa semanal)';el.style.color='#137333'}
-  }catch(err){
-    console.warn(err);
-    if(el){el.textContent='Error al enviar';el.style.color='#c62828'}
-    alert('Error al enviar a Supabase: '+err.message);
-  }finally{
-    if(btn){btn.disabled=false;if(prev)btn.textContent=prev}
-  }
 }
 async function sincronizarGoogleDesdeMapa(){
   const btn=document.getElementById('btnSyncGoogle');
@@ -1546,8 +1517,6 @@ document.getElementById('refDateInput').addEventListener('change',aplicarFechaRe
 document.getElementById('refDateHoy').addEventListener('click',()=>{FECHA_REFERENCIA=null;actualizarControlFechaUi();renderMapaPrincipal({preserveView:true});if(MAPA&&MAPA.closePopup)MAPA.closePopup()});
 actualizarControlFechaUi();
 document.getElementById('btnSalidas').addEventListener('click',()=>{window.open('predicacion.html','_blank','noopener')});
-document.getElementById('btnRecibirSupabase').addEventListener('click',()=>{recibirDatosSemanaDesdeSupabase()});
-document.getElementById('btnSyncSupabase').addEventListener('click',()=>{sincronizarSupabaseDesdeMapa()});
 document.getElementById('btnRecibirGoogle').addEventListener('click',()=>{recibirDatosSemanaDesdeGoogle()});
 document.getElementById('btnSyncGoogle').addEventListener('click',()=>{sincronizarGoogleDesdeMapa()});
 document.getElementById('btnReferencias').addEventListener('click',()=>{setModoReferencias(!MODO_REFERENCIAS)});

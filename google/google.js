@@ -396,7 +396,4 @@
     };
 
     window.TerritoriosGoogle = api;
-    if (!window.TerritoriosSupabase) {
-        window.TerritoriosSupabase = api;
-    }
 }());
