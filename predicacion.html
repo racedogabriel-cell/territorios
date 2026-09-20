@@ -1,0 +1,1910 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Predicación V2 - Senior Final (Zoom Control)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        :root {
+            --primary: #2c3e50; 
+            --primary-bg: #f2f5f8; 
+            --accent: #b78b1e; 
+            --accent-bg: #fdf5e6; 
+            --danger: #cc0000; 
+            --bg: #ffffff;
+            --k: 1;
+            --group-1-bg: #dbeafe;
+            --group-1-fg: #1565c0;
+            --group-2-bg: #ede7f6;
+            --group-2-fg: #5e35b1;
+            --group-default-bg: #eef2f6;
+            --group-default-fg: #2c3e50;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .controls {
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            z-index: 200;
+            align-items: center;
+        }
+
+        /* Estilo para el contenedor del Zoom */
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 8px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        .date-range-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            padding: 8px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: 800;
+            font-size: 14px;
+            color: #111;
+        }
+
+        .date-range-control label {
+            white-space: nowrap;
+        }
+
+        .date-range-control input[type="date"] {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-upload { background: #eee; color: #000; }
+
+        .canvas {
+            width: 98vw;
+            height: calc(98vw * 1.25);
+            max-height: 88vh;
+            max-width: calc(88vh * 0.8);
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: calc(10px * var(--k)) 15px;
+            text-align: center;
+            border-bottom: calc(5px * var(--k)) solid var(--accent);
+            flex-shrink: 0;
+        }
+
+        .header h1 { 
+            font-size: calc(32px * var(--k)); 
+            font-weight: 900; 
+            text-transform: uppercase;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .day-block {
+            display: flex;
+            border-bottom: calc(4px * var(--k)) solid #ccc;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .day-sidebar {
+            background: var(--primary-bg);
+            color: var(--primary);
+            width: calc(65px * var(--k)); 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: calc(10px * var(--k));
+            flex-shrink: 0;
+            border-right: 1px solid #ccc;
+            padding: 10px 0;
+        }
+
+        .day-sidebar.weekend { background: var(--accent-bg); color: var(--accent); }
+
+        .day-name,
+        .day-num {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .day-num {
+            font-size: calc(30px * var(--k)); 
+        }
+
+        .day-name {
+            font-size: calc(24px * var(--k)); 
+            text-transform: uppercase;
+        }
+
+        .meetings-container { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .meeting {
+            padding: calc(8px * var(--k)) calc(15px * var(--k));
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .meeting:nth-child(even) { background-color: #fafafa; }
+
+        .meeting.meeting--pueblo {
+            background-color: #f3e8dc;
+        }
+        .meeting.meeting--pueblo:nth-child(even) {
+            background-color: #f3e8dc;
+        }
+
+        .row-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .time {
+            font-size: calc(55px * var(--k)); 
+            font-weight: 900;
+            color: #000;
+            line-height: 1;
+            flex-shrink: 0;
+            display: inline-block;
+            white-space: nowrap;
+            transform: scaleX(0.8);
+            transform-origin: left center;
+        }
+
+        .info-group { 
+            flex: 1; 
+            min-width: 0; 
+            display: block; 
+        }
+
+        .place {
+            font-size: calc(34px * var(--k)); 
+            font-weight: 800;
+            color: #1a1a1a;
+            line-height: 1.1;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .place.place--with-icon {
+            display: flex;
+            align-items: flex-start;
+            gap: calc(10px * var(--k));
+        }
+
+        .place-icon {
+            width: calc(36px * var(--k));
+            height: calc(36px * var(--k));
+            object-fit: contain;
+            flex-shrink: 0;
+            display: block;
+        }
+
+        .place-text {
+            min-width: 0;
+        }
+
+        .place--group-1 { color: var(--group-1-fg); }
+        .place--group-2 { color: var(--group-2-fg); }
+        .place--group-default { color: var(--group-default-fg); }
+
+        .sub-info {
+            font-size: calc(18px * var(--k)); 
+            font-weight: 700;
+            color: #555;
+            line-height: 1.2;
+            display: block;
+        }
+
+        .group-pill {
+            display: inline-block;
+            padding: calc(2px * var(--k)) calc(8px * var(--k));
+            border-radius: calc(6px * var(--k));
+            line-height: 1.2;
+        }
+
+        .group-pill--1 { background: var(--group-1-bg); }
+        .group-pill--2 { background: var(--group-2-bg); }
+        .group-pill--default { background: var(--group-default-bg); }
+
+        .group-pill-label {
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .group-pill--1 .group-pill-label { color: var(--group-1-fg); }
+        .group-pill--2 .group-pill-label { color: var(--group-2-fg); }
+        .group-pill--default .group-pill-label { color: var(--group-default-fg); }
+
+        .group-pill-resp {
+            font-weight: 700;
+            color: #555;
+            text-transform: none;
+        }
+
+        .terr-badges { 
+            display: flex; 
+            gap: 4px; 
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: #fff;
+            padding: calc(6px * var(--k)) calc(12px * var(--k));
+            border-radius: 6px;
+            font-size: calc(34px * var(--k)); 
+            font-weight: 900;
+            border: 4px solid transparent;
+            line-height: 1;
+        }
+        .badge.clickable {
+            cursor: pointer;
+            transition: transform 0.08s ease, filter 0.08s ease;
+        }
+        .badge.clickable:hover { filter: brightness(1.08); }
+        .badge.clickable:active { transform: scale(0.97); }
+
+        .badge.note { background: var(--accent); color: #fff; }
+        .badge.danger-border { border-color: var(--danger); }
+        .badge.badge-pueblo {
+            background: #7b4f2e;
+            color: #fff;
+            font-size: calc(26px * var(--k));
+            padding: calc(6px * var(--k)) calc(14px * var(--k));
+            letter-spacing: 0.02em;
+        }
+
+        .alert-box {
+            padding: 4px 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            font-size: calc(18px * var(--k)); 
+            font-weight: 400; 
+            line-height: 1.2;
+            border-left: 4px solid; 
+        }
+
+        .alert-box.manzanas { background: #fef9e7; border-left-color: var(--accent); color: #444; }
+        .alert-box.no-visitar { background: #fdedec; border-left-color: var(--danger); color: #444; }
+
+        .hidden { display: none !important; }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 16px;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            width: min(560px, 96vw);
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+            padding: 16px;
+        }
+        .modal-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+        .modal-subtitle {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 14px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .modal-btn {
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+        .modal-btn-green { background: #2e7d32; color: #fff; }
+        .modal-btn-red { background: #c62828; color: #fff; }
+        .modal-btn-blue { background: #1565c0; color: #fff; }
+        .modal-btn-amber { background: #ef6c00; color: #fff; }
+        .modal-btn-gray { background: #eceff1; color: #263238; }
+        .modal-btn-save { background: #1565c0; color: #fff; width: 100%; box-sizing: border-box; }
+        .tm-guardar-wrap { margin-bottom: 10px; width: 100%; }
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+            margin: 10px 0 12px 0;
+        }
+        .modal-error {
+            color: #b00020;
+            font-size: 14px;
+            margin: 8px 0 0 0;
+            min-height: 18px;
+        }
+        .modal-error.modal-msg-ok {
+            color: #1b5e20;
+            font-weight: 700;
+        }
+        .tm-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .tm-grid .full {
+            grid-column: 1 / -1;
+        }
+        .tm-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #455a64;
+            margin-bottom: 4px;
+        }
+        .tm-select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cfd8dc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .tm-mapa-wrap {
+            margin-bottom: 10px;
+        }
+        .tm-mapa-title {
+            font-size: 12px;
+            color: #455a64;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: .25px;
+        }
+        #tm-mini-mapa {
+            width: 100%;
+            height: 230px;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            background: #eef2f7;
+        }
+        .territorio-label {
+            background: transparent !important;
+            border: 0 !important;
+        }
+        .territorio-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            height: 24px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 2px solid rgba(0, 0, 0, .24);
+            background: #fff;
+            color: #111;
+            font-size: 14px;
+            font-weight: 900;
+            line-height: 1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+            white-space: nowrap;
+        }
+        .territorio-pill.sel {
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, .22), 0 1px 5px rgba(0, 0, 0, .24);
+        }
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <button class="btn btn-upload" onclick="cargarDesdeBase()">Actualizar desde base</button>
+    <button class="btn btn-upload" id="btn-agregados" type="button">Agregados</button>
+
+    <div class="date-range-control">
+        <label for="filtro-desde">Desde</label>
+        <input type="date" id="filtro-desde" />
+        <label for="filtro-hasta">Hasta</label>
+        <input type="date" id="filtro-hasta" />
+    </div>
+    
+    <div class="zoom-control">
+        <label>ZOOM:</label>
+        <input type="range" id="zoom-slider" min="0.2" max="2.5" step="0.01" value="1" oninput="manualZoom(this.value)">
+    </div>
+
+    <input type="file" id="csv" accept=".csv" class="hidden">
+</div>
+
+<div class="canvas" id="capture">
+    <div class="header"><h1 id="header-text">SALIDAS DE PREDICACIÓN</h1></div>
+    <div class="main-content" id="viewport"><div id="root"></div></div>
+</div>
+<div id="territorio-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+        <div class="modal-title" id="tm-title">Territorio</div>
+        <div class="modal-subtitle" id="tm-subtitle">Elegí la acción</div>
+        <div id="tm-body"></div>
+        <div class="modal-error" id="tm-error"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const root = document.getElementById('root');
+    const viewport = document.getElementById('viewport');
+    const headerText = document.getElementById('header-text');
+    const zoomSlider = document.getElementById('zoom-slider');
+    const territorioModal = document.getElementById('territorio-modal');
+    const tmTitle = document.getElementById('tm-title');
+    const tmSubtitle = document.getElementById('tm-subtitle');
+    const tmBody = document.getElementById('tm-body');
+    const tmError = document.getElementById('tm-error');
+    let territorioSeleccionado = '';
+    let tmMiniMapa = null;
+    let tmMiniMapaLayer = null;
+    let tmMetaCache = null;
+    let tmTerritoriosCache = null;
+    let tmDatosCache = null;
+    let tmAgregadosCache = null;
+    let tmSalidaCtxPersisted = null;
+    let tmAjusteSalida = null;
+    let salidasCache = [];
+    const descripcionPorNumeroMemo = {};
+    const FILTRO_FECHAS_KEY = 'predicacion.filtroFechas';
+    const filtroDesdeEl = document.getElementById('filtro-desde');
+    const filtroHastaEl = document.getElementById('filtro-hasta');
+
+    function fechaLocalDesdeDate(d) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function sumarDiasLocal(d, dias) {
+        const out = new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias);
+        return out;
+    }
+
+    function defaultsFiltroFechas() {
+        const hoy = new Date();
+        return {
+            desde: fechaLocalDesdeDate(hoy),
+            hasta: fechaLocalDesdeDate(sumarDiasLocal(hoy, 6))
+        };
+    }
+
+    function leerFiltroFechasGuardado() {
+        try {
+            const raw = localStorage.getItem(FILTRO_FECHAS_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.desde || !parsed.hasta) return null;
+            return { desde: String(parsed.desde), hasta: String(parsed.hasta) };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function guardarFiltroFechas() {
+        if (!filtroDesdeEl || !filtroHastaEl) return;
+        localStorage.setItem(FILTRO_FECHAS_KEY, JSON.stringify({
+            desde: filtroDesdeEl.value || '',
+            hasta: filtroHastaEl.value || ''
+        }));
+    }
+
+    function inicializarFiltroFechas() {
+        if (!filtroDesdeEl || !filtroHastaEl) return;
+        const def = defaultsFiltroFechas();
+        const saved = leerFiltroFechasGuardado();
+        filtroDesdeEl.value = (saved && saved.desde) || def.desde;
+        filtroHastaEl.value = (saved && saved.hasta) || def.hasta;
+        if (filtroDesdeEl.value && filtroHastaEl.value && filtroDesdeEl.value > filtroHastaEl.value) {
+            filtroHastaEl.value = filtroDesdeEl.value;
+        }
+        filtroDesdeEl.addEventListener('change', onFiltroFechasChange);
+        filtroHastaEl.addEventListener('change', onFiltroFechasChange);
+    }
+
+    function onFiltroFechasChange() {
+        if (!filtroDesdeEl || !filtroHastaEl) return;
+        if (filtroDesdeEl.value && filtroHastaEl.value && filtroDesdeEl.value > filtroHastaEl.value) {
+            if (document.activeElement === filtroDesdeEl) filtroHastaEl.value = filtroDesdeEl.value;
+            else filtroDesdeEl.value = filtroHastaEl.value;
+        }
+        guardarFiltroFechas();
+        renderFiltrado();
+    }
+
+    function filtrarSalidasPorRango(data) {
+        const desde = filtroDesdeEl?.value || '';
+        const hasta = filtroHastaEl?.value || '';
+        if (!desde && !hasta) return data;
+        return data.filter((it) => {
+            const key = fechaLocalDesdeDate(it.d);
+            if (desde && key < desde) return false;
+            if (hasta && key > hasta) return false;
+            return true;
+        });
+    }
+
+    function renderFiltrado() {
+        render(filtrarSalidasPorRango(salidasCache));
+    }
+    function horaLocalDesdeDate(d) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function esTerritorioPueblo(t) {
+        const n = parseInt(t, 10);
+        return !isNaN(n) && n >= 200;
+    }
+    function descripcionTerritorio(numero, fallbackDesc) {
+        const num = String(numero ?? '').trim();
+        const direct = String(fallbackDesc ?? '').trim();
+        if (direct) {
+            descripcionPorNumeroMemo[num] = direct;
+            return direct;
+        }
+        if (descripcionPorNumeroMemo[num]) return descripcionPorNumeroMemo[num];
+        if (tmAgregadosCache && tmAgregadosCache.descripcionPorNumero) {
+            const fromAgg = String(tmAgregadosCache.descripcionPorNumero[num] || '').trim();
+            if (fromAgg) {
+                descripcionPorNumeroMemo[num] = fromAgg;
+                return fromAgg;
+            }
+        }
+        const fromCache = salidasCache.find((it) => String(it.t).trim() === num && String(it.desc || '').trim());
+        if (fromCache) {
+            const d = String(fromCache.desc).trim();
+            descripcionPorNumeroMemo[num] = d;
+            return d;
+        }
+        return '';
+    }
+    function etiquetaTerritorio(numero, fallbackDesc) {
+        const desc = descripcionTerritorio(numero, fallbackDesc);
+        if (desc) return desc;
+        return esTerritorioPueblo(numero) ? `Pueblo T-${numero}` : String(numero ?? '');
+    }
+    function tituloModalTerritorio(numero) {
+        const desc = descripcionTerritorio(numero);
+        if (esTerritorioPueblo(numero)) {
+            return desc ? `${desc} (T-${numero})` : `Pueblo (T-${numero})`;
+        }
+        return `Territorio ${numero}`;
+    }
+    function htmlBadgeTerritorioSalida(it) {
+        const esPueblo = esTerritorioPueblo(it.t);
+        let cls = 'badge clickable';
+        if (esPueblo) cls += ' badge-pueblo';
+        if (it.m) cls += ' note';
+        if (it.nv) cls += ' danger-border';
+        const ef = fechaLocalDesdeDate(it.d);
+        const eh = horaLocalDesdeDate(it.d);
+        const labelTxt = etiquetaTerritorio(it.t, it.desc);
+        const label = escapeHtml(labelTxt);
+        const attrs = `class="${cls}" data-territorio="${escapeHtml(it.t)}" data-descripcion="${escapeHtml(it.desc || '')}" data-env-fecha="${ef}" data-env-hora="${eh}" data-responsable="${escapeHtml(it.r)}"`;
+        return '<div ' + attrs + '>' + label + '</div>';
+    }
+    function htmlBadgesTerritoriosSalida(items) {
+        return items.map((it) => htmlBadgeTerritorioSalida(it)).join('');
+    }
+    function leerTmAjusteSalidaDesdeInputs() {
+        const respEl = document.getElementById('tm-edit-responsable');
+        const fechaEl = document.getElementById('tm-edit-fecha');
+        const horaEl = document.getElementById('tm-edit-hora');
+        if (!respEl || !fechaEl || !horaEl) return tmAjusteSalida;
+        const responsable = (respEl.value || '').trim();
+        return {
+            responsable,
+            fecha: (fechaEl.value || '').trim(),
+            hora: (horaEl.value || '').trim()
+        };
+    }
+    function construirPayloadAjusteSalida() {
+        const a = tmAjusteSalida;
+        if (!a || !a.fecha || !a.hora) return {};
+        return {
+            responsableAjuste: (a.responsable || '').trim(),
+            enviadoAjuste: `${a.fecha}T${a.hora}:00`
+        };
+    }
+    function construirPayloadAjusteSalidaFlexible() {
+        const a = tmAjusteSalida;
+        if (!a) return {};
+        const out = {};
+        const resp = (a.responsable || '').trim();
+        if (resp) out.responsableAjuste = resp;
+        if (a.fecha && a.hora) out.enviadoAjuste = `${a.fecha}T${a.hora}:00`;
+        return out;
+    }
+
+    async function guardarEdicionSalidaModal() {
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
+        const flex = construirPayloadAjusteSalidaFlexible();
+        if (!flex.responsableAjuste && !flex.enviadoAjuste) {
+            tmError.textContent = 'Indicá responsable y/o fecha y hora para guardar.';
+            return;
+        }
+        try {
+            const resp = await fetch('/api/territorios/guardar-edicion-salida', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numero: territorioSeleccionado, ...flex })
+            });
+            const body = await resp.json().catch(() => ({}));
+            if (!resp.ok || body.ok === false) throw new Error(body.error || body.message || ('HTTP ' + resp.status));
+            tmSalidaCtxPersisted = { ...tmAjusteSalida };
+            await cargarDesdeBase();
+            tmError.classList.add('modal-msg-ok');
+            tmError.textContent = 'Cambios guardados.';
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    async function guardarGrupoModal() {
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        const sel = document.getElementById('tm-edit-grupo');
+        if (!sel) {
+            tmError.textContent = 'No se encontró el selector de grupo.';
+            return;
+        }
+        const grupo = (sel.value || '').trim();
+        try {
+            const resp = await fetch('/api/territorios/guardar-grupo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    numero: territorioSeleccionado,
+                    grupo: grupo || null
+                })
+            });
+            const body = await resp.json().catch(() => ({}));
+            if (!resp.ok || body.ok === false) throw new Error(body.error || body.message || ('HTTP ' + resp.status));
+            tmAgregadosCache = null;
+            await cargarDesdeBase();
+            tmError.classList.add('modal-msg-ok');
+            tmError.textContent = grupo ? 'Grupo guardado.' : 'Grupo eliminado.';
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    async function cargarDesdeBase() {
+        try {
+            const respSalidas = await fetch('/api/salidas', { cache: 'no-store' });
+            if (!respSalidas.ok) throw new Error('HTTP ' + respSalidas.status + ' en /api/salidas');
+            const arr = await respSalidas.json();
+            salidasCache = parseRows(arr);
+            for (const it of salidasCache) {
+                if (it.desc) descripcionPorNumeroMemo[String(it.t).trim()] = it.desc;
+            }
+            renderFiltrado();
+        } catch (e) {
+            salidasCache = [];
+            headerText.innerHTML = 'SALIDAS DE PREDICACIÓN (sin datos)';
+            root.innerHTML = '<div style="padding:20px;font-size:18px;color:#b00020;">Error cargando salidas desde Access: ' + e.message + '</div>';
+        }
+    }
+
+    function normalizarListaCatalogo(raw) {
+        const out = [];
+        if (Array.isArray(raw)) {
+            for (const item of raw) {
+                const txt = String(item ?? '').trim();
+                if (!txt) continue;
+                const partes = txt.split(',').map((s) => s.trim()).filter(Boolean);
+                if (partes.length > 1) {
+                    for (const p of partes) out.push(p);
+                } else {
+                    out.push(txt);
+                }
+            }
+        } else if (typeof raw === 'string') {
+            out.push(...raw.split(',').map((s) => s.trim()).filter(Boolean));
+        }
+        return [...new Set(out)];
+    }
+
+    async function cargarDatosAgregados() {
+        if (tmAgregadosCache) return tmAgregadosCache;
+        const [rForm, rTerr] = await Promise.all([
+            fetch('/api/form-data', { cache: 'no-store' }),
+            fetch('/api/territorios', { cache: 'no-store' })
+        ]);
+        if (!rForm.ok) throw new Error('HTTP ' + rForm.status + ' en /api/form-data');
+        if (!rTerr.ok) throw new Error('HTTP ' + rTerr.status + ' en /api/territorios');
+        const form = await rForm.json();
+        const terr = await rTerr.json();
+        const responsablesUnicos = normalizarListaCatalogo(form?.responsables);
+        const gruposUnicos = normalizarListaCatalogo(form?.grupos);
+        const territorios = Array.isArray(terr) ? terr.map((t) => String(t?.numero || '').trim()).filter(Boolean) : [];
+        territorios.sort((a, b) => Number(a) - Number(b));
+        const grupoPorNumero = {};
+        const descripcionPorNumero = {};
+        if (Array.isArray(terr)) {
+            for (const t of terr) {
+                const num = String(t?.numero || '').trim();
+                if (!num) continue;
+                grupoPorNumero[num] = String(t?.grupo ?? '').trim();
+                const desc = String(t?.descripcion ?? t?.Descripcion ?? '').trim();
+                if (desc) {
+                    descripcionPorNumero[num] = desc;
+                    descripcionPorNumeroMemo[num] = desc;
+                }
+            }
+        }
+        tmAgregadosCache = {
+            responsables: responsablesUnicos,
+            grupos: gruposUnicos,
+            territorios,
+            grupoPorNumero,
+            descripcionPorNumero
+        };
+        return tmAgregadosCache;
+    }
+
+    function htmlOpcionesGrupo(grupos, grupoActual) {
+        const actual = String(grupoActual || '').trim();
+        const list = Array.isArray(grupos) ? [...grupos] : [];
+        if (actual && !list.some((g) => g === actual)) list.unshift(actual);
+        let opts = `<option value="">Sin grupo</option>`;
+        opts += list.map((g) => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+        return opts;
+    }
+
+    function parseRows(rows) {
+        if (!Array.isArray(rows)) return [];
+        function parseFechaFlexible(v) {
+            if (!v) return new Date('');
+            const txt = String(v).trim();
+            let d = new Date(txt); // ISO: 2026-04-21T10:00:00
+            if (!isNaN(d)) return d;
+            d = new Date(txt.replace('T', ' ').replace(/-/g, '/')); // fallback
+            return d;
+        }
+        return rows.map(item => ({
+            t: item.NumeroTerritorio || '',
+            p: item.PuntosDeEncuentros || '',
+            r: item.Responsables || '',
+            g: item.Grupos || '',
+            d: parseFechaFlexible(item.Enviado),
+            pr: Number.isFinite(Number(item.Prioridad)) ? Number(item.Prioridad) : NaN,
+            m: item.ManzanasPendientes || '',
+            nv: item.Direccion || '',
+            desc: String(item.Descripcion || item.descripcion || '').trim()
+        })).filter(x => !isNaN(x.d)).sort((a,b) => a.d - b.d);
+    }
+
+    function escapeHtml(txt) {
+        return String(txt ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function groupPillVariant(groupName) {
+        const match = String(groupName || '').trim().match(/^grupo\s*(\d+)\b/i);
+        if (!match) return 'default';
+        return match[1] === '1' || match[1] === '2' ? match[1] : 'default';
+    }
+
+    function htmlGroupBlock(groupName, responsables) {
+        const variant = groupPillVariant(groupName);
+        const label = `${escapeHtml(String(groupName).trim())}:`;
+        const resps = escapeHtml(responsables);
+        return `<span class="group-pill group-pill--${variant}"><span class="group-pill-label">${label}</span> <span class="group-pill-resp">${resps}</span></span>`;
+    }
+
+    function htmlPlaceLabel(place, placeCls) {
+        const placeTxt = String(place || '').trim();
+        const safe = escapeHtml(placeTxt);
+        // Solo ícono si no es una esquina unida con "y" (varios puntos).
+        if (!placeTxt || /\by\b/i.test(placeTxt)) {
+            return `<span class="${placeCls}">${safe}</span>`;
+        }
+        const isSalon = /sal[oó]n\s+del\s+reino/i.test(placeTxt);
+        const src = isSalon ? 'assets/jw-logo.png' : 'assets/casita.png';
+        const alt = isSalon ? 'Salón del Reino' : 'Casa';
+        return `<span class="${placeCls} place--with-icon"><img class="place-icon" src="${src}" alt="${alt}" /><span class="place-text">${safe}</span></span>`;
+    }
+
+    function fmtDiaMes(isoOrDate) {
+        if (isoOrDate instanceof Date) {
+            return `${isoOrDate.getDate()}/${isoOrDate.getMonth() + 1}`;
+        }
+        const m = String(isoOrDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) return `${Number(m[3])}/${Number(m[2])}`;
+        return '';
+    }
+
+    function render(data) {
+        const desdeTxt = fmtDiaMes(filtroDesdeEl?.value) || (data[0] ? fmtDiaMes(data[0].d) : '');
+        const hastaTxt = fmtDiaMes(filtroHastaEl?.value) || (data.length ? fmtDiaMes(data[data.length - 1].d) : '');
+        if (desdeTxt && hastaTxt) {
+            headerText.innerHTML = `SALIDAS DE PREDICACIÓN • ${desdeTxt} al ${hastaTxt}`;
+        } else {
+            headerText.innerHTML = 'SALIDAS DE PREDICACIÓN';
+        }
+        if (data.length === 0) {
+            root.innerHTML = '<div style="padding:20px;font-size:18px;color:#555;">No hay salidas en el rango seleccionado.</div>';
+            return;
+        }
+
+        const daysMap = new Map();
+        data.forEach(it => {
+            const dK = it.d.toDateString();
+            if(!daysMap.has(dK)) daysMap.set(dK, new Map());
+            const tStr = it.d.getHours() + ":" + String(it.d.getMinutes()).padStart(2,'0');
+            const meetKey = tStr + "|" + it.p + "|" + (it.g || '');
+            if(!daysMap.get(dK).has(meetKey)) {
+                daysMap.get(dK).set(meetKey, { time: tStr, place: it.p, items: [] });
+            }
+            daysMap.get(dK).get(meetKey).items.push(it);
+        });
+
+        let html = '';
+        daysMap.forEach((meetings, dayKey) => {
+            const dObj = new Date(dayKey);
+            const dNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+            const isW = dObj.getDay() == 0 || dObj.getDay() == 6;
+            
+            html += `<div class="day-block">
+                <div class="day-sidebar ${isW ? 'weekend' : ''}">
+                    <div class="day-num">${dObj.getDate()}</div>
+                    <div class="day-name">${dNames[dObj.getDay()]}</div>
+                </div>
+                <div class="meetings-container">`;
+
+            meetings.forEach(m => {
+                m.items.sort((a, b) => {
+                    const pa = isNaN(a.pr) ? Number.MAX_SAFE_INTEGER : a.pr;
+                    const pb = isNaN(b.pr) ? Number.MAX_SAFE_INTEGER : b.pr;
+                    return pa - pb;
+                });
+
+                const resps = [...new Set(m.items.map(i => i.r))].join(' / ');
+                const groupName = m.items[0].g;
+                const isCongregacional = !groupName || groupName.toLowerCase() === 'congregacional';
+                const placeCls = isCongregacional ? 'place' : `place place--group-${groupPillVariant(groupName)}`;
+                const tienePueblo = m.items.some((it) => esTerritorioPueblo(it.t));
+                const meetingCls = tienePueblo ? 'meeting meeting--pueblo' : 'meeting';
+
+                html += `<div class="${meetingCls}">
+                    <div class="row-main">
+                        <div class="time">${m.time}</div>
+                        <div class="info-group">
+                            ${htmlPlaceLabel(m.place, placeCls)}
+                            <div class="sub-info">
+                                ${!isCongregacional ? htmlGroupBlock(groupName, resps) : resps}
+                            </div>
+                        </div>
+                        <div class="terr-badges">
+                            ${htmlBadgesTerritoriosSalida(m.items)}
+                        </div>
+                    </div>
+                    ${m.items.some(i => i.m) ? `
+                        <div class="alert-box manzanas">
+                            ${m.items.filter(i => i.m).map(i => `<div>T-${i.t}: ${i.m}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${m.items.some(i => i.nv) ? `
+                        <div class="alert-box no-visitar">
+                            ${m.items.filter(i => i.nv).map(i => `<div>T-${i.t} NO VISITAR: ${i.nv}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>`;
+            });
+            html += `</div></div>`;
+        });
+        root.innerHTML = html;
+        root.querySelectorAll('.badge.clickable').forEach((el) => {
+            el.addEventListener('click', onBadgeTerritorioClick);
+        });
+        
+        // Ejecutamos ajuste inicial automático y sincronizamos slider
+        setTimeout(() => {
+            adjustSize();
+            const currentK = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k'));
+            zoomSlider.value = currentK;
+        }, 50);
+    }
+
+    function manualZoom(val) {
+        document.documentElement.style.setProperty('--k', val);
+        ajustarAnchoHorarios();
+    }
+    function clamp(v, min, max) {
+        return Math.min(max, Math.max(min, v));
+    }
+    function zoomConRueda(deltaY) {
+        const actual = Number(zoomSlider.value || 1);
+        const paso = Number(zoomSlider.step || 0.01);
+        const min = Number(zoomSlider.min || 0.2);
+        const max = Number(zoomSlider.max || 2.5);
+        const dir = deltaY < 0 ? 1 : -1; // arriba: acercar, abajo: alejar
+        const siguiente = clamp(actual + (dir * paso), min, max);
+        zoomSlider.value = String(siguiente);
+        manualZoom(siguiente);
+    }
+
+    function ajustarAnchoHorarios() {
+        root.querySelectorAll('.time').forEach((el) => {
+            el.style.marginRight = '0';
+            // Recuperar el 20% que scaleX deja vacío en el layout
+            el.style.marginRight = `${-(el.offsetWidth * 0.2)}px`;
+        });
+    }
+
+    function adjustSize() {
+        const vH = viewport.clientHeight;
+        let k = 1.6; 
+        for (let i = 0; i < 30; i++) {
+            document.documentElement.style.setProperty('--k', k);
+            const contentH = root.scrollHeight;
+            if (contentH > vH) k = k * (vH / contentH) * 0.99;
+            else if (vH - contentH > 15 && k < 1.8) k = k * 1.01;
+            else break;
+        }
+        ajustarAnchoHorarios();
+    }
+
+    async function onBadgeTerritorioClick(ev) {
+        const badge = ev.currentTarget;
+        const numero = (badge.dataset.territorio || '').trim();
+        if (!numero) return;
+        const ctx = {
+            responsable: (badge.dataset.responsable || '').trim(),
+            fecha: (badge.dataset.envFecha || '').trim(),
+            hora: (badge.dataset.envHora || '').trim(),
+            descripcion: (badge.dataset.descripcion || '').trim()
+        };
+        await abrirModalTerritorio(numero, ctx);
+    }
+
+    async function abrirModalTerritorio(numero, ctx, territoriosPuebloLista = null) {
+        territorioSeleccionado = numero;
+        if (ctx && ctx.descripcion) descripcionTerritorio(numero, ctx.descripcion);
+        if (ctx && ctx.fecha) {
+            tmSalidaCtxPersisted = { responsable: ctx.responsable || '', fecha: ctx.fecha, hora: ctx.hora || '' };
+            tmAjusteSalida = { ...tmSalidaCtxPersisted };
+        } else if (!tmAjusteSalida || !tmAjusteSalida.fecha) {
+            tmAjusteSalida = tmSalidaCtxPersisted
+                ? { ...tmSalidaCtxPersisted }
+                : { responsable: '', fecha: '', hora: '' };
+        }
+        tmTitle.textContent = tituloModalTerritorio(numero);
+        const nombrePueblo = descripcionTerritorio(numero, ctx && ctx.descripcion);
+        tmSubtitle.textContent = esTerritorioPueblo(numero)
+            ? ((nombrePueblo ? nombrePueblo + ' · ' : '') + 'elegí una acción')
+            : 'Elegí una acción';
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmBody.innerHTML = '<div style="padding:12px;color:#607d8b">Cargando…</div>';
+        territorioModal.classList.add('open');
+        territorioModal.setAttribute('aria-hidden', 'false');
+
+        const a = tmAjusteSalida;
+        const puebloPickerHtml = Array.isArray(territoriosPuebloLista) && territoriosPuebloLista.length > 1
+            ? `<div class="full">
+                    <label class="tm-label" for="tm-pueblo-pick">Territorio pueblo</label>
+                    <select id="tm-pueblo-pick" class="tm-select">
+                        ${territoriosPuebloLista.map((n) => {
+                            const etq = etiquetaTerritorio(n);
+                            return `<option value="${escapeHtml(n)}"${String(n) === String(numero) ? ' selected' : ''}>${escapeHtml(etq)} (T-${escapeHtml(n)})</option>`;
+                        }).join('')}
+                    </select>
+                </div>`
+            : '';
+        try {
+            const data = await cargarDatosAgregados();
+            let opts = data.responsables.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+            if (a.responsable && !data.responsables.some((x) => x === a.responsable)) {
+                opts = `<option value="${escapeHtml(a.responsable)}">${escapeHtml(a.responsable)}</option>` + opts;
+            }
+            const grupoActual = (data.grupoPorNumero && data.grupoPorNumero[String(numero)]) || '';
+            const optsGrupo = htmlOpcionesGrupo(data.grupos, grupoActual);
+            tmBody.innerHTML = `
+                ${puebloPickerHtml}
+                <div class="tm-grid tm-edit-salida">
+                    <div class="full">
+                        <label class="tm-label" for="tm-edit-responsable">Responsable</label>
+                        <select id="tm-edit-responsable" class="tm-select">${opts}</select>
+                    </div>
+                    <div class="full">
+                        <label class="tm-label" for="tm-edit-grupo">Grupo</label>
+                        <select id="tm-edit-grupo" class="tm-select">${optsGrupo}</select>
+                    </div>
+                </div>
+                <div class="tm-guardar-wrap">
+                    <button type="button" class="modal-btn modal-btn-save" id="tm-guardar-grupo">Guardar grupo</button>
+                </div>
+                <div class="tm-grid tm-edit-salida">
+                    <div>
+                        <label class="tm-label" for="tm-edit-fecha">Fecha de salida</label>
+                        <input id="tm-edit-fecha" class="tm-select" type="date" value="${escapeHtml(a.fecha)}">
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-edit-hora">Hora</label>
+                        <input id="tm-edit-hora" class="tm-select" type="time" value="${escapeHtml(a.hora)}">
+                    </div>
+                </div>
+                <div class="tm-guardar-wrap">
+                    <button type="button" class="modal-btn modal-btn-save" id="tm-guardar-salida">Guardar cambios</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-green" id="tm-hecho">Hecho</button>
+                    <button class="modal-btn modal-btn-red" id="tm-sin-hacer">Sin hacer</button>
+                    <button class="modal-btn modal-btn-gray" id="tm-cancelar">Cancelar</button>
+                </div>
+            `;
+            const sel = document.getElementById('tm-edit-responsable');
+            if (sel && a.responsable) sel.value = a.responsable;
+            const selGrupo = document.getElementById('tm-edit-grupo');
+            if (selGrupo) selGrupo.value = grupoActual;
+        } catch (e) {
+            tmBody.innerHTML = `
+                ${puebloPickerHtml}
+                <div class="tm-grid tm-edit-salida">
+                    <div class="full">
+                        <label class="tm-label" for="tm-edit-responsable">Responsable</label>
+                        <input id="tm-edit-responsable" class="modal-input" type="text" value="${escapeHtml(a.responsable)}" />
+                    </div>
+                    <div class="full">
+                        <label class="tm-label" for="tm-edit-grupo">Grupo</label>
+                        <select id="tm-edit-grupo" class="tm-select">
+                            <option value="">Sin grupo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="tm-guardar-wrap">
+                    <button type="button" class="modal-btn modal-btn-save" id="tm-guardar-grupo">Guardar grupo</button>
+                </div>
+                <div class="modal-error" style="margin-bottom:8px">Catálogo no cargado: ${escapeHtml(e.message)}</div>
+                <div class="tm-grid tm-edit-salida">
+                    <div>
+                        <label class="tm-label" for="tm-edit-fecha">Fecha de salida</label>
+                        <input id="tm-edit-fecha" class="tm-select" type="date" value="${escapeHtml(a.fecha)}">
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-edit-hora">Hora</label>
+                        <input id="tm-edit-hora" class="tm-select" type="time" value="${escapeHtml(a.hora)}">
+                    </div>
+                </div>
+                <div class="tm-guardar-wrap">
+                    <button type="button" class="modal-btn modal-btn-save" id="tm-guardar-salida">Guardar cambios</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-green" id="tm-hecho">Hecho</button>
+                    <button class="modal-btn modal-btn-red" id="tm-sin-hacer">Sin hacer</button>
+                    <button class="modal-btn modal-btn-gray" id="tm-cancelar">Cancelar</button>
+                </div>
+            `;
+        }
+
+        document.getElementById('tm-guardar-grupo').addEventListener('click', guardarGrupoModal);
+        document.getElementById('tm-guardar-salida').addEventListener('click', guardarEdicionSalidaModal);
+        document.getElementById('tm-hecho').addEventListener('click', mostrarOpcionesHecho);
+        document.getElementById('tm-sin-hacer').addEventListener('click', async () => {
+            await ejecutarAccionTerritorio('sin-hacer');
+        });
+        document.getElementById('tm-cancelar').addEventListener('click', cerrarModalTerritorio);
+        const puebloPick = document.getElementById('tm-pueblo-pick');
+        if (puebloPick) {
+            puebloPick.addEventListener('change', () => {
+                const n = (puebloPick.value || '').trim();
+                if (!n) return;
+                territorioSeleccionado = n;
+                tmTitle.textContent = tituloModalTerritorio(n);
+                const selGrupo = document.getElementById('tm-edit-grupo');
+                if (selGrupo && tmAgregadosCache && tmAgregadosCache.grupoPorNumero) {
+                    const g = tmAgregadosCache.grupoPorNumero[String(n)] || '';
+                    if (g && ![...selGrupo.options].some((o) => o.value === g)) {
+                        const opt = document.createElement('option');
+                        opt.value = g;
+                        opt.textContent = g;
+                        selGrupo.appendChild(opt);
+                    }
+                    selGrupo.value = g;
+                }
+            });
+        }
+    }
+
+    async function abrirModalAgregados() {
+        tmTitle.textContent = 'Agregar cierre manual';
+        tmSubtitle.textContent = 'Seleccioná territorio, fecha y responsable';
+        tmError.textContent = '';
+        tmBody.innerHTML = '<div style="padding:8px 0;color:#607d8b">Cargando datos…</div>';
+        territorioModal.classList.add('open');
+        territorioModal.setAttribute('aria-hidden', 'false');
+        try {
+            const data = await cargarDatosAgregados();
+            const hoy = new Date().toISOString().slice(0, 10);
+            tmBody.innerHTML = `
+                <div class="tm-grid">
+                    <div>
+                        <label class="tm-label" for="tm-ag-territorio">Territorio</label>
+                        <select id="tm-ag-territorio" class="tm-select">
+                            <option value="">Seleccionar…</option>
+                            ${data.territorios.map((n) => {
+                                const etq = etiquetaTerritorio(n);
+                                const label = esTerritorioPueblo(n) && etq !== String(n)
+                                    ? `${etq} (T-${n})`
+                                    : n;
+                                return `<option value="${escapeHtml(n)}">${escapeHtml(label)}</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-ag-fecha">Fecha</label>
+                        <input id="tm-ag-fecha" class="tm-select" type="date" value="${hoy}">
+                    </div>
+                    <div class="full">
+                        <label class="tm-label" for="tm-ag-responsable">Responsable</label>
+                        <select id="tm-ag-responsable" class="tm-select">
+                            <option value="">Seleccionar…</option>
+                            ${data.responsables.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="full">
+                        <label class="tm-label" for="tm-ag-manzanas">Manzanas pendientes (solo incompleto)</label>
+                        <input id="tm-ag-manzanas" class="modal-input" type="text" placeholder="Ej: Faltan 3 manzanas que dan a..." />
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-blue" data-ag-accion="completado">Completado</button>
+                    <button class="modal-btn modal-btn-amber" data-ag-accion="incompleto">Incompleto</button>
+                    <button class="modal-btn modal-btn-green" data-ag-accion="completado-campana">Completado en Campaña</button>
+                    <button class="modal-btn modal-btn-gray" id="tm-ag-cancelar">Cancelar</button>
+                </div>
+            `;
+            tmBody.querySelectorAll('[data-ag-accion]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const accion = btn.getAttribute('data-ag-accion') || '';
+                    await ejecutarAccionAgregado(accion);
+                });
+            });
+            document.getElementById('tm-ag-cancelar').addEventListener('click', cerrarModalTerritorio);
+        } catch (e) {
+            tmError.textContent = 'Error cargando datos: ' + e.message;
+        }
+    }
+
+    async function ejecutarAccionAgregado(accion) {
+        const numero = (document.getElementById('tm-ag-territorio')?.value || '').trim();
+        const fecha = (document.getElementById('tm-ag-fecha')?.value || '').trim();
+        const responsable = (document.getElementById('tm-ag-responsable')?.value || '').trim();
+        const manzanasPendientes = (document.getElementById('tm-ag-manzanas')?.value || '').trim();
+        if (!numero) { tmError.textContent = 'Seleccioná un territorio.'; return; }
+        if (!fecha) { tmError.textContent = 'Seleccioná una fecha.'; return; }
+        if (!responsable) { tmError.textContent = 'Seleccioná un responsable.'; return; }
+        if (accion === 'incompleto' && !manzanasPendientes) { tmError.textContent = 'Ingresá manzanas pendientes para incompleto.'; return; }
+        tmError.textContent = '';
+        try {
+            const resp = await fetch('/api/territorios/agregado-accion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numero, fecha, responsable, accion, manzanasPendientes })
+            });
+            const body = await resp.json().catch(() => ({}));
+            if (!resp.ok || body.ok === false) throw new Error(body.error || body.message || ('HTTP ' + resp.status));
+            cerrarModalTerritorio();
+            await cargarDesdeBase();
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    function mostrarOpcionesHecho() {
+        tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
+        tmSubtitle.textContent = 'Elegí cómo cerrar el territorio';
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmBody.innerHTML = `
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-blue" id="tm-completado">Completado</button>
+                <button class="modal-btn modal-btn-amber" id="tm-incompleto">Incompleto</button>
+                <button class="modal-btn modal-btn-green" id="tm-campana">Completado en Campaña</button>
+                <button class="modal-btn modal-btn-gray" id="tm-volver">Volver</button>
+            </div>
+        `;
+        document.getElementById('tm-completado').addEventListener('click', async () => {
+            await ejecutarAccionTerritorio('completado');
+        });
+        document.getElementById('tm-incompleto').addEventListener('click', pedirIncompleto);
+        document.getElementById('tm-campana').addEventListener('click', async () => {
+            await ejecutarAccionTerritorio('completado-campana');
+        });
+        document.getElementById('tm-volver').addEventListener('click', () => abrirModalTerritorio(territorioSeleccionado, null));
+    }
+
+    async function obtenerMetaMapa() {
+        if (tmMetaCache) return tmMetaCache;
+        const resp = await fetch('mapa_meta.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status + ' en mapa_meta.json');
+        tmMetaCache = await resp.json();
+        return tmMetaCache;
+    }
+
+    async function obtenerDatosTerritoriosMiniMapa() {
+        if (tmDatosCache) return tmDatosCache;
+        try {
+            const resp = await fetch('/api/territorios', { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status + ' en /api/territorios');
+            const arr = await resp.json();
+            const dict = {};
+            for (const t of Array.isArray(arr) ? arr : []) {
+                const numero = String(t.numero ?? '').trim();
+                if (!numero) continue;
+                dict[numero] = {
+                    dias: Number.isFinite(Number(t.dias)) ? Number(t.dias) : null,
+                    abiertoCerrado: !!t.abiertoCerrado,
+                    rurales: !!t.rurales,
+                    manzanasPendientes: t.manzanasPendientes || '',
+                    campana: !!t.campana
+                };
+            }
+            tmDatosCache = dict;
+            return tmDatosCache;
+        } catch (_) {
+            tmDatosCache = {};
+            return tmDatosCache;
+        }
+    }
+
+    function leerLatLon(valor) {
+        if (!valor) return null;
+        if (Array.isArray(valor) && valor.length >= 2) {
+            const lat = Number(valor[0]), lon = Number(valor[1]);
+            if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+        }
+        if (typeof valor === 'string') {
+            const p = valor.split(/[;,]/).map(x => Number(String(x).trim().replace(',', '.')));
+            if (p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])) return { lat: p[0], lon: p[1] };
+        }
+        if (typeof valor === 'object') {
+            const lat = Number(valor.lat ?? valor.latitude ?? valor.Latitud);
+            const lon = Number(valor.lon ?? valor.lng ?? valor.long ?? valor.Longitud);
+            if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+        }
+        return null;
+    }
+
+    function extraerPuntosPolygon(pointsAttr) {
+        return String(pointsAttr || '')
+            .trim()
+            .split(/\s+/)
+            .map((par) => par.split(',').map(Number))
+            .filter((pt) => pt.length >= 2 && Number.isFinite(pt[0]) && Number.isFinite(pt[1]));
+    }
+
+    function centroPuntos(pts) {
+        if (!pts || !pts.length) return { x: 0, y: 0 };
+        return {
+            x: pts.reduce((acc, p) => acc + p[0], 0) / pts.length,
+            y: pts.reduce((acc, p) => acc + p[1], 0) / pts.length
+        };
+    }
+
+    function resolverSistema3x3(A, b) {
+        const m = [
+            [A[0][0], A[0][1], A[0][2], b[0]],
+            [A[1][0], A[1][1], A[1][2], b[1]],
+            [A[2][0], A[2][1], A[2][2], b[2]]
+        ];
+        for (let col = 0; col < 3; col++) {
+            let piv = col;
+            for (let row = col + 1; row < 3; row++) {
+                if (Math.abs(m[row][col]) > Math.abs(m[piv][col])) piv = row;
+            }
+            if (Math.abs(m[piv][col]) < 1e-12) return null;
+            if (piv !== col) [m[col], m[piv]] = [m[piv], m[col]];
+            const div = m[col][col];
+            for (let j = col; j < 4; j++) m[col][j] /= div;
+            for (let row = 0; row < 3; row++) {
+                if (row === col) continue;
+                const fac = m[row][col];
+                for (let j = col; j < 4; j++) m[row][j] -= fac * m[col][j];
+            }
+        }
+        return [m[0][3], m[1][3], m[2][3]];
+    }
+
+    function ajustarTransformacionAfin(controles) {
+        if (!controles || controles.length < 3) return null;
+        let sxx = 0, sxy = 0, sx = 0, syy = 0, sy = 0, n = 0;
+        let blx = 0, bly = 0, bl1 = 0, bax = 0, bay = 0, ba1 = 0;
+        for (const p of controles) {
+            const x = p.x, y = p.y;
+            sxx += x * x; sxy += x * y; sx += x;
+            syy += y * y; sy += y; n += 1;
+            blx += x * p.lon; bly += y * p.lon; bl1 += p.lon;
+            bax += x * p.lat; bay += y * p.lat; ba1 += p.lat;
+        }
+        const A = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]];
+        const lonCoef = resolverSistema3x3(A, [blx, bly, bl1]);
+        const latCoef = resolverSistema3x3(A, [bax, bay, ba1]);
+        if (!lonCoef || !latCoef) return null;
+        return { lonCoef, latCoef };
+    }
+
+    function aplicarTransformacion(tr, x, y) {
+        return {
+            lon: tr.lonCoef[0] * x + tr.lonCoef[1] * y + tr.lonCoef[2],
+            lat: tr.latCoef[0] * x + tr.latCoef[1] * y + tr.latCoef[2]
+        };
+    }
+
+    const TM_LINEA_VIA_SVG = { x1: 28, y1: 392, x2: 1040, y2: 366 };
+    const TM_AJUSTE_STORAGE_KEY = 'territorios-ajuste-global-v1';
+    const TM_COLOR_INCOMPLETO = '#ff3a99';
+    const TM_COLOR_CAMPANA = '#ffff00';
+    const TM_COLOR_ASIGNADO = '#d32f2f';
+    const TM_COLOR_SIN_DATOS = '#eeeeee';
+    const TM_ESCALA = [
+        { min: -15, max: 27, color: '#F2F2F2' }, { min: 28, max: 55, color: '#E0F7FA' },
+        { min: 56, max: 62, color: '#4DD0E1' }, { min: 63, max: 69, color: '#2196F3' },
+        { min: 70, max: 76, color: '#0D47A1' }, { min: 77, max: 83, color: '#C6FF00' },
+        { min: 84, max: 90, color: '#2E7D32' }, { min: 91, max: 97, color: '#FFEB3B' },
+        { min: 98, max: 104, color: '#FF9800' }, { min: 105, max: 111, color: '#E65100' },
+        { min: 112, max: 118, color: '#6200EA' }, { min: 119, max: Infinity, color: '#000000' }
+    ];
+
+    function colorPorMoraMini(dias) {
+        if (dias == null || Number.isNaN(dias)) return TM_COLOR_SIN_DATOS;
+        for (const tramo of TM_ESCALA) {
+            if (dias >= tramo.min && dias <= tramo.max) return tramo.color;
+        }
+        return TM_ESCALA[TM_ESCALA.length - 1].color;
+    }
+
+    function estiloTerritorioMini(numero, selected, datos) {
+        const info = datos[String(numero)] || {};
+        const fillColor = colorPorMoraMini(info.dias);
+        const incompleto = !!(info.manzanasPendientes && String(info.manzanasPendientes).trim());
+        const asignado = !!info.abiertoCerrado;
+        const campana = !!info.campana;
+        const borderColor = incompleto ? TM_COLOR_INCOMPLETO : (asignado ? TM_COLOR_ASIGNADO : (campana ? TM_COLOR_CAMPANA : fillColor));
+        return {
+            style: {
+                color: borderColor,
+                opacity: selected ? 1 : .95,
+                weight: selected ? 4 : 2.6,
+                fillColor,
+                fillOpacity: selected ? .18 : .28,
+                lineJoin: 'round'
+            },
+            asignado,
+            rural: !!info.rurales
+        };
+    }
+
+    function asegurarDefsTramasMini(svg) {
+        if (!svg) return;
+        let defs = svg.querySelector('defs[data-tramas-mini="1"]');
+        if (defs) return;
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        defs.setAttribute('data-tramas-mini', '1');
+        const mkPattern = (id, color, strokeWidth) => {
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            p.setAttribute('id', id);
+            p.setAttribute('patternUnits', 'userSpaceOnUse');
+            p.setAttribute('width', '10');
+            p.setAttribute('height', '10');
+            p.setAttribute('patternTransform', 'rotate(45)');
+            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l.setAttribute('x1', '0');
+            l.setAttribute('y1', '0');
+            l.setAttribute('x2', '0');
+            l.setAttribute('y2', '10');
+            l.setAttribute('stroke', color);
+            l.setAttribute('stroke-opacity', '.72');
+            l.setAttribute('stroke-width', String(strokeWidth));
+            p.appendChild(l);
+            return p;
+        };
+        defs.appendChild(mkPattern('tm-trama-asignado', TM_COLOR_ASIGNADO, 3.8));
+        defs.appendChild(mkPattern('tm-trama-rural', '#111', 3.8));
+        svg.insertBefore(defs, svg.firstChild);
+    }
+
+    function aplicarTramaMini(path, patternId) {
+        if (!path) return;
+        const svg = path.ownerSVGElement;
+        if (!svg) return;
+        asegurarDefsTramasMini(svg);
+        path.setAttribute('fill', `url(#${patternId})`);
+        path.setAttribute('fill-opacity', '1');
+    }
+
+    function iconoEtiquetaMini(numero, selected) {
+        const html = `<span class="territorio-pill${selected ? ' sel' : ''}" style="background:#fff;color:#111;border-color:${selected ? '#1a73e8' : 'rgba(0,0,0,.24)'}">${String(numero)}</span>`;
+        return L.divIcon({
+            className: 'territorio-label',
+            html,
+            iconSize: selected ? [62, 28] : [46, 24],
+            iconAnchor: selected ? [31, 14] : [23, 12]
+        });
+    }
+
+    function yLineaViaEnSvg(x) {
+        const den = (TM_LINEA_VIA_SVG.x2 - TM_LINEA_VIA_SVG.x1) || 1;
+        return TM_LINEA_VIA_SVG.y1 + (TM_LINEA_VIA_SVG.y2 - TM_LINEA_VIA_SVG.y1) * ((x - TM_LINEA_VIA_SVG.x1) / den);
+    }
+
+    function grupoSegunViaSvg(x, y) {
+        return y <= yLineaViaEnSvg(x) ? 'arriba' : 'abajo';
+    }
+
+    function metrosPorGradoLon(lat) {
+        return Math.cos(lat * Math.PI / 180) * 111320;
+    }
+
+    function geoALocal(lat, lon, ref) {
+        return { x: (lon - ref.lon) * metrosPorGradoLon(ref.lat), y: (lat - ref.lat) * 111320 };
+    }
+
+    function localAGeo(x, y, ref) {
+        return { lat: ref.lat + y / 111320, lon: ref.lon + x / metrosPorGradoLon(ref.lat) };
+    }
+
+    function boundsDesdePuntosLocal(localPts) {
+        if (!localPts.length) return null;
+        return {
+            minX: Math.min(...localPts.map((p) => p.x)),
+            maxX: Math.max(...localPts.map((p) => p.x)),
+            minY: Math.min(...localPts.map((p) => p.y)),
+            maxY: Math.max(...localPts.map((p) => p.y))
+        };
+    }
+
+    function cornersDesdeBounds(bounds) {
+        if (!bounds) return null;
+        return {
+            nw: { x: bounds.minX, y: bounds.maxY },
+            ne: { x: bounds.maxX, y: bounds.maxY },
+            se: { x: bounds.maxX, y: bounds.minY },
+            sw: { x: bounds.minX, y: bounds.minY }
+        };
+    }
+
+    function transformarLocalPorCorners(x, y, bounds, corners) {
+        if (!bounds || !corners) return { x, y };
+        const denX = (bounds.maxX - bounds.minX) || 1;
+        const denY = (bounds.maxY - bounds.minY) || 1;
+        const s = (x - bounds.minX) / denX;
+        const t = (y - bounds.minY) / denY;
+        return {
+            x: (1 - s) * (1 - t) * corners.sw.x + s * (1 - t) * corners.se.x + (1 - s) * t * corners.nw.x + s * t * corners.ne.x,
+            y: (1 - s) * (1 - t) * corners.sw.y + s * (1 - t) * corners.se.y + (1 - s) * t * corners.nw.y + s * t * corners.ne.y
+        };
+    }
+
+    function normalizarCorners(corners) {
+        if (!corners || typeof corners !== 'object') return null;
+        const out = {};
+        for (const k of ['nw', 'ne', 'se', 'sw']) {
+            const p = corners[k];
+            if (!p) return null;
+            const x = Number(p.x), y = Number(p.y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+            out[k] = { x, y };
+        }
+        return out;
+    }
+
+    function parseAjusteGruposDesdeRaiz(parsed) {
+        if (!parsed || typeof parsed !== 'object') return null;
+        const out = { groups: null, compat: null };
+        if (parsed.groups && typeof parsed.groups === 'object') {
+            const g = {};
+            if (parsed.groups.arriba) g.arriba = normalizarCorners(parsed.groups.arriba);
+            if (parsed.groups.abajo) g.abajo = normalizarCorners(parsed.groups.abajo);
+            if (Object.keys(g).length) out.groups = g;
+        }
+        if (!out.groups && parsed.corners) {
+            const c = normalizarCorners(parsed.corners);
+            if (c) out.compat = { mode: 'single-bilinear', corners: c };
+        }
+        if (!out.groups && !out.compat && ('dx' in parsed || 'rot' in parsed || 'scaleX' in parsed || 'scaleY' in parsed || 'scale' in parsed)) {
+            out.compat = parsed;
+        }
+        return out;
+    }
+
+    function leerAjusteGruposGuardado() {
+        try {
+            const raw = localStorage.getItem(TM_AJUSTE_STORAGE_KEY);
+            if (!raw) return null;
+            return parseAjusteGruposDesdeRaiz(JSON.parse(raw));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function leerAjusteGruposConPortable() {
+        try {
+            const r = await fetch('/api/portable-ui', { cache: 'no-store' });
+            if (!r.ok) throw new Error('no');
+            const doc = await r.json();
+            return parseAjusteGruposDesdeRaiz(doc && doc.ajusteGlobal);
+        } catch (_) {
+            return leerAjusteGruposGuardado();
+        }
+    }
+
+    function transformarLocalCompat(x, y, compat, boundsBase) {
+        if (!compat) return { x, y };
+        if (compat.mode === 'single-bilinear' && compat.corners) return transformarLocalPorCorners(x, y, boundsBase, compat.corners);
+        const dx = Number.isFinite(Number(compat.dx)) ? Number(compat.dx) : 0;
+        const dy = Number.isFinite(Number(compat.dy)) ? Number(compat.dy) : 0;
+        const rot = Number.isFinite(Number(compat.rot)) ? Number(compat.rot) : 0;
+        const scaleCompat = Number.isFinite(Number(compat.scale)) ? Number(compat.scale) : 1;
+        const scaleX = Number.isFinite(Number(compat.scaleX)) ? Number(compat.scaleX) : scaleCompat;
+        const scaleY = Number.isFinite(Number(compat.scaleY)) ? Number(compat.scaleY) : scaleCompat;
+        const ang = rot * Math.PI / 180;
+        const cos = Math.cos(ang), sin = Math.sin(ang);
+        const xs = scaleX * x, ys = scaleY * y;
+        return { x: cos * xs - sin * ys + dx, y: sin * xs + cos * ys + dy };
+    }
+
+    async function obtenerTerritoriosMiniMapa() {
+        if (tmTerritoriosCache) return tmTerritoriosCache;
+        const [meta, svgTxt] = await Promise.all([
+            obtenerMetaMapa(),
+            fetch('mapa.svg', { cache: 'no-store' }).then((r) => {
+                if (!r.ok) throw new Error('HTTP ' + r.status + ' en mapa.svg');
+                return r.text();
+            })
+        ]);
+        const gps = (meta && meta.gps) ? meta.gps : {};
+        const doc = new DOMParser().parseFromString(svgTxt, 'image/svg+xml');
+        const shapes = [];
+        doc.querySelectorAll('.territorio').forEach((shape) => {
+            const numero = String(shape.getAttribute('data-n') || '').trim();
+            if (!numero || numero === '500') return;
+            const tag = String(shape.tagName || '').toLowerCase();
+            let pts = [];
+            if (tag === 'polygon') {
+                pts = extraerPuntosPolygon(shape.getAttribute('points'));
+            } else if (tag === 'rect') {
+                const x = Number(shape.getAttribute('x'));
+                const y = Number(shape.getAttribute('y'));
+                const w = Number(shape.getAttribute('width'));
+                const h = Number(shape.getAttribute('height'));
+                if ([x, y, w, h].every(Number.isFinite)) pts = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+            }
+            if (pts.length < 3) return;
+            shapes.push({ numero, tag, pts, centro: centroPuntos(pts) });
+        });
+        const controlesRect = shapes
+            .filter((s) => s.tag === 'rect' && Number(s.numero) < 200)
+            .map((s) => {
+                const p = leerLatLon(gps[s.numero]);
+                return p ? { x: s.centro.x, y: s.centro.y, lat: p.lat, lon: p.lon } : null;
+            })
+            .filter(Boolean);
+        const controlesTodos = shapes
+            .filter((s) => Number(s.numero) < 200)
+            .map((s) => {
+                const p = leerLatLon(gps[s.numero]);
+                return p ? { x: s.centro.x, y: s.centro.y, lat: p.lat, lon: p.lon } : null;
+            })
+            .filter(Boolean);
+        const controles = controlesRect.length >= 8 ? controlesRect : controlesTodos;
+        const tr = ajustarTransformacionAfin(controles);
+        if (!tr) throw new Error('No se pudo calibrar mapa de territorios.');
+        const territoriosBase = shapes.map((s) => {
+            const latlngsBase = s.pts.map(([x, y]) => aplicarTransformacion(tr, x, y)).map((p) => [p.lat, p.lon]);
+            const centroBase = aplicarTransformacion(tr, s.centro.x, s.centro.y);
+            return {
+                numero: s.numero,
+                groupKey: grupoSegunViaSvg(s.centro.x, s.centro.y),
+                latlngsBase,
+                centroBase
+            };
+        });
+        const todos = territoriosBase.flatMap((t) => t.latlngsBase);
+        const avg = todos.reduce((acc, p) => ({ lat: acc.lat + p[0], lon: acc.lon + p[1] }), { lat: 0, lon: 0 });
+        const centroRef = { lat: avg.lat / Math.max(1, todos.length), lon: avg.lon / Math.max(1, todos.length) };
+        const boundsPorGrupo = {};
+        for (const g of ['arriba', 'abajo']) {
+            const ptsGrupo = territoriosBase
+                .filter((t) => t.groupKey === g)
+                .flatMap((t) => t.latlngsBase)
+                .map((p) => geoALocal(p[0], p[1], centroRef));
+            boundsPorGrupo[g] = boundsDesdePuntosLocal(ptsGrupo);
+        }
+        const baseCornersPorGrupo = {
+            arriba: cornersDesdeBounds(boundsPorGrupo.arriba),
+            abajo: cornersDesdeBounds(boundsPorGrupo.abajo)
+        };
+        const ajustadoGuardado = await leerAjusteGruposConPortable();
+        let cornersPorGrupo = { ...baseCornersPorGrupo };
+        if (ajustadoGuardado && ajustadoGuardado.groups) {
+            cornersPorGrupo = {
+                arriba: ajustadoGuardado.groups.arriba || baseCornersPorGrupo.arriba,
+                abajo: ajustadoGuardado.groups.abajo || baseCornersPorGrupo.abajo
+            };
+        } else if (ajustadoGuardado && ajustadoGuardado.compat) {
+            const todosLocal = territoriosBase.flatMap((t) => t.latlngsBase).map((p) => geoALocal(p[0], p[1], centroRef));
+            const boundsBase = boundsDesdePuntosLocal(todosLocal);
+            const aplicarCompatGrupo = (corners) => {
+                if (!corners) return null;
+                const out = {};
+                for (const k of ['nw', 'ne', 'se', 'sw']) {
+                    out[k] = transformarLocalCompat(corners[k].x, corners[k].y, ajustadoGuardado.compat, boundsBase);
+                }
+                return out;
+            };
+            cornersPorGrupo = {
+                arriba: aplicarCompatGrupo(baseCornersPorGrupo.arriba),
+                abajo: aplicarCompatGrupo(baseCornersPorGrupo.abajo)
+            };
+        }
+        tmTerritoriosCache = territoriosBase.map((t) => {
+            const bounds = boundsPorGrupo[t.groupKey];
+            const corners = cornersPorGrupo[t.groupKey];
+            const latlngs = t.latlngsBase.map((p) => {
+                const loc = geoALocal(p[0], p[1], centroRef);
+                const adj = transformarLocalPorCorners(loc.x, loc.y, bounds, corners);
+                const geo = localAGeo(adj.x, adj.y, centroRef);
+                return [geo.lat, geo.lon];
+            });
+            const cLoc = geoALocal(t.centroBase.lat, t.centroBase.lon, centroRef);
+            const cAdj = transformarLocalPorCorners(cLoc.x, cLoc.y, bounds, corners);
+            const cGeo = localAGeo(cAdj.x, cAdj.y, centroRef);
+            return { numero: t.numero, latlngs, centroGeo: cGeo };
+        });
+        return tmTerritoriosCache;
+    }
+
+    async function renderMiniMapaIncompleto(numero) {
+        const el = document.getElementById('tm-mini-mapa');
+        if (!el || typeof L === 'undefined') return;
+        try {
+            const [territorios, datos] = await Promise.all([obtenerTerritoriosMiniMapa(), obtenerDatosTerritoriosMiniMapa()]);
+            const keySel = String(numero).trim();
+            if (!tmMiniMapa) {
+                tmMiniMapa = L.map(el, {
+                    zoomControl: true,
+                    attributionControl: false,
+                    scrollWheelZoom: true
+                });
+                L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=es&x={x}&y={y}&z={z}', {
+                    subdomains: '0123',
+                    maxZoom: 21,
+                    maxNativeZoom: 20,
+                    detectRetina: true,
+                    attribution: '&copy; Google'
+                }).addTo(tmMiniMapa);
+            }
+            if (tmMiniMapaLayer) tmMiniMapa.removeLayer(tmMiniMapaLayer);
+            tmMiniMapaLayer = L.layerGroup().addTo(tmMiniMapa);
+            let polySel = null;
+            const polys = [];
+            for (const t of territorios) {
+                const esSel = String(t.numero) === keySel;
+                const est = estiloTerritorioMini(t.numero, esSel, datos);
+                const poly = L.polygon(t.latlngs, est.style).addTo(tmMiniMapaLayer);
+                if (est.asignado || est.rural) {
+                    const overlay = L.polygon(t.latlngs, {
+                        color: 'transparent',
+                        weight: 0,
+                        fillColor: '#fff',
+                        fillOpacity: 1,
+                        interactive: false
+                    }).addTo(tmMiniMapaLayer);
+                    const aplicar = () => {
+                        if (!overlay || !overlay._path) return;
+                        if (est.asignado) aplicarTramaMini(overlay._path, 'tm-trama-asignado');
+                        else aplicarTramaMini(overlay._path, 'tm-trama-rural');
+                    };
+                    overlay.on('add', aplicar);
+                    setTimeout(aplicar, 0);
+                }
+                L.marker([t.centroGeo.lat, t.centroGeo.lon], {
+                    icon: iconoEtiquetaMini(t.numero, esSel),
+                    interactive: false,
+                    keyboard: false
+                }).addTo(tmMiniMapaLayer);
+                polys.push(poly);
+                if (esSel) polySel = poly;
+            }
+            if (polySel && polySel.getBounds && polySel.getBounds().isValid()) {
+                tmMiniMapa.fitBounds(polySel.getBounds(), { padding: [18, 18], maxZoom: 18 });
+            } else {
+                const b = L.featureGroup(polys).getBounds();
+                if (b && b.isValid()) tmMiniMapa.fitBounds(b, { padding: [18, 18], maxZoom: 16 });
+            }
+            setTimeout(() => tmMiniMapa && tmMiniMapa.invalidateSize(), 0);
+        } catch (e) {
+            el.innerHTML = '<div style="padding:10px;color:#b00020;font-size:13px;">No se pudo cargar el mini mapa.</div>';
+        }
+    }
+
+    function pedirIncompleto() {
+        tmSubtitle.textContent = 'Incompleto: texto de Manzanas Pendientes';
+        tmError.textContent = '';
+        tmBody.innerHTML = `
+            <div class="tm-mapa-wrap">
+                <div class="tm-mapa-title">Mapa del territorio (calles)</div>
+                <div id="tm-mini-mapa"></div>
+            </div>
+            <input id="tm-manzanas" class="modal-input" type="text" placeholder="Ej: Faltan 3 manzanas que dan a..." />
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-amber" id="tm-confirmar-incompleto">Confirmar Incompleto</button>
+                <button class="modal-btn modal-btn-gray" id="tm-volver-hecho">Volver</button>
+            </div>
+        `;
+        renderMiniMapaIncompleto(territorioSeleccionado);
+        document.getElementById('tm-confirmar-incompleto').addEventListener('click', async () => {
+            const txt = (document.getElementById('tm-manzanas').value || '').trim();
+            if (!txt) {
+                tmError.textContent = 'Ingresá el texto de Manzanas Pendientes.';
+                return;
+            }
+            await ejecutarAccionTerritorio('incompleto', txt);
+        });
+        document.getElementById('tm-volver-hecho').addEventListener('click', mostrarOpcionesHecho);
+    }
+
+    async function ejecutarAccionTerritorio(tipo, manzanasPendientes = '') {
+        tmError.textContent = '';
+        if (document.getElementById('tm-edit-fecha')) {
+            tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
+        }
+        const ajustePayload = construirPayloadAjusteSalida();
+        try {
+            if (tipo === 'sin-hacer') {
+                const resp = await fetch('/api/territorios/cerrar-sin-hecho', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ numero: territorioSeleccionado, ...ajustePayload })
+                });
+                const body = await resp.json().catch(() => ({}));
+                if (!resp.ok || body.ok === false) {
+                    throw new Error(body.error || body.message || ('HTTP ' + resp.status));
+                }
+            } else {
+                const resp = await fetch('/api/territorios/cerrar-con-accion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero: territorioSeleccionado,
+                        accion: tipo,
+                        manzanasPendientes,
+                        ...ajustePayload
+                    })
+                });
+                const body = await resp.json().catch(() => ({}));
+                if (!resp.ok || body.ok === false) {
+                    throw new Error(body.error || body.message || ('HTTP ' + resp.status));
+                }
+            }
+            cerrarModalTerritorio();
+            await cargarDesdeBase();
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    function cerrarModalTerritorio() {
+        territorioModal.classList.remove('open');
+        territorioModal.setAttribute('aria-hidden', 'true');
+        tmBody.innerHTML = '';
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmSalidaCtxPersisted = null;
+        tmAjusteSalida = null;
+        if (tmMiniMapa && tmMiniMapaLayer) {
+            tmMiniMapa.removeLayer(tmMiniMapaLayer);
+            tmMiniMapaLayer = null;
+        }
+    }
+
+    function catalogoDesdeFormYTerr(form, terr) {
+        const responsablesUnicos = normalizarListaCatalogo(form?.responsables);
+        const gruposUnicos = normalizarListaCatalogo(form?.grupos);
+        const territorios = Array.isArray(terr) ? terr.map((t) => String(t?.numero || '').trim()).filter(Boolean) : [];
+        territorios.sort((a, b) => Number(a) - Number(b));
+        return { responsables: responsablesUnicos, grupos: gruposUnicos, territorios };
+    }
+
+    window.addEventListener('load', function() {
+        inicializarFiltroFechas();
+        cargarDesdeBase();
+        const btnAg = document.getElementById('btn-agregados');
+        if (btnAg) btnAg.addEventListener('click', abrirModalAgregados);
+    });
+    document.addEventListener('wheel', function(ev) {
+        // Permite ajustar el zoom visual con la ruedita del mouse.
+        ev.preventDefault();
+        zoomConRueda(ev.deltaY);
+    }, { passive: false });
+    territorioModal.addEventListener('click', (ev) => {
+        if (ev.target === territorioModal) cerrarModalTerritorio();
+    });
+</script>
+</body>
+</html>

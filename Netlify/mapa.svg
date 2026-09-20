@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="20.53 8.42 1025.94 599.38" font-family="Arial, sans-serif" data-generado-en="2026-04-20 19:27:12">
+  <rect id="t500" data-n="500" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="972.64" y="181.94" width="68.83" height="26.23" />
+  <rect id="t98" data-n="98" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="496.03" y="116.88" width="16.95" height="38.72" />
+  <rect id="t97" data-n="97" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="453.99" y="116.88" width="39.1" height="38.72" />
+  <rect id="t76" data-n="76" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="475.01" y="158.53" width="37.97" height="38.95" />
+  <rect id="t56" data-n="56" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="475.01" y="242.27" width="37.97" height="39.39" />
+  <rect id="t55" data-n="55" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="475.01" y="284.59" width="37.97" height="39.16" />
+  <rect id="t77" data-n="77" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="432.97" y="158.53" width="39.1" height="38.95" />
+  <rect id="t75" data-n="75" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="432.97" y="200.62" width="39.1" height="38.72" />
+  <rect id="t57" data-n="57" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="432.97" y="242.27" width="39.1" height="39.39" />
+  <rect id="t35" data-n="35" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="432.97" y="327.58" width="39.1" height="38.94" />
+  <rect id="t96" data-n="96" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="412.4" y="116.88" width="38.65" height="38.72" />
+  <rect id="t95" data-n="95" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="370.36" y="116.88" width="39.1" height="38.72" />
+  <rect id="t74" data-n="74" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.38" y="200.62" width="38.65" height="38.72" />
+  <rect id="t58" data-n="58" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.38" y="242.27" width="38.65" height="39.39" />
+  <rect id="t54" data-n="54" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.38" y="284.59" width="38.65" height="39.16" />
+  <rect id="t36" data-n="36" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.38" y="327.58" width="38.65" height="38.94" />
+  <rect id="t37" data-n="37" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="350.24" y="327.58" width="38.2" height="38.94" />
+  <rect id="t53" data-n="53" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="350.24" y="284.59" width="38.2" height="39.16" />
+  <rect id="t59" data-n="59" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="350.24" y="242.27" width="38.2" height="39.39" />
+  <rect id="t73" data-n="73" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="350.24" y="200.62" width="38.2" height="38.72" />
+  <rect id="t79" data-n="79" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="350.24" y="158.53" width="38.2" height="38.95" />
+  <rect id="t80" data-n="80" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="158.53" width="38.88" height="38.95" />
+  <rect id="t72" data-n="72" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="200.62" width="38.88" height="38.72" />
+  <rect id="t60" data-n="60" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="242.27" width="38.88" height="39.39" />
+  <rect id="t52" data-n="52" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="284.59" width="38.88" height="39.16" />
+  <rect id="t38" data-n="38" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="327.58" width="38.88" height="38.94" />
+  <rect id="t61" data-n="61" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="242.27" width="38.88" height="39.39" />
+  <rect id="t71" data-n="71" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="200.62" width="38.88" height="38.72" />
+  <rect id="t81" data-n="81" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="158.53" width="38.88" height="38.95" />
+  <rect id="t99" data-n="99" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="350.24" y="80.42" width="36.62" height="33.32" />
+  <rect id="t94" data-n="94" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="329.22" y="116.88" width="38.2" height="38.72" />
+  <rect id="t100" data-n="100" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="75.02" width="38.88" height="38.72" />
+  <rect id="t93" data-n="93" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="287.63" y="116.88" width="38.65" height="38.72" />
+  <rect id="t101" data-n="101" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="75.02" width="38.88" height="38.72" />
+  <polygon id="t92" data-n="92" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="284.7,116.88 284.7,155.61 246.62,155.61 246.62,134.39 242.88,134.39 242.88,116.88 284.7,116.88" />
+  <polygon id="t91" data-n="91" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="243.79,155.61 204.68,155.61 204.68,116.88 240.03,116.88 240.03,134.39 240.03,137.35 243.79,137.35 243.79,155.61" />
+  <polygon id="t102" data-n="102" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="204.68,33.6 204.68,113.74 263.9,113.74 263.9,74.91 223.09,74.91 223.09,33.6 204.68,33.6" />
+  <rect id="t103" data-n="103" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="226.16" y="33.6" width="37.75" height="38.49" />
+  <rect id="t107" data-n="107" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="204.68" y="13.42" width="59.22" height="17.25" />
+  <rect id="t106" data-n="106" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="13.42" width="38.88" height="37.51" />
+  <rect id="t105" data-n="105" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="33.6" width="38.88" height="17.33" />
+  <rect id="t104" data-n="104" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="53.86" width="80.46" height="18.23" />
+  <rect id="t90" data-n="90" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="163.09" y="137.15" width="38.65" height="18.46" />
+  <rect id="t89" data-n="89" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="143.66" y="116.88" width="16.5" height="38.72" />
+  <rect id="t87" data-n="87" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="62.83" y="138.27" width="31.03" height="17.33" />
+  <rect id="t86" data-n="86" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="62.83" y="179.69" width="31.03" height="17.78" />
+  <rect id="t85" data-n="85" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="179.69" width="38.27" height="17.78" />
+  <rect id="t84" data-n="84" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="138.01" y="158.53" width="42.72" height="38.95" />
+  <rect id="t83" data-n="83" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="183.66" y="158.53" width="39.55" height="38.95" />
+  <rect id="t82" data-n="82" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="226.16" y="158.53" width="37.75" height="38.95" />
+  <rect id="t70" data-n="70" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="226.16" y="200.62" width="37.75" height="38.72" />
+  <rect id="t69" data-n="69" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="183.66" y="200.62" width="39.55" height="38.72" />
+  <rect id="t68" data-n="68" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="138.01" y="200.62" width="42.72" height="38.72" />
+  <rect id="t67" data-n="67" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="200.62" width="38.27" height="38.72" />
+  <rect id="t66" data-n="66" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="55.37" y="200.62" width="38.49" height="38.72" />
+  <rect id="t46" data-n="46" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="55.37" y="242.27" width="17.24" height="81.93" />
+  <rect id="t65" data-n="65" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="75.55" y="242.27" width="38.88" height="39.39" />
+  <rect id="t64" data-n="64" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="117.37" y="242.27" width="42.79" height="39.39" />
+  <rect id="t63" data-n="63" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="163.09" y="242.27" width="38.65" height="39.39" />
+  <rect id="t62" data-n="62" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="204.68" y="242.27" width="59.22" height="39.39" />
+  <rect id="t50" data-n="50" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="204.68" y="284.59" width="59.22" height="39.62" />
+  <rect id="t49" data-n="49" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="163.09" y="284.59" width="38.65" height="39.62" />
+  <rect id="t48" data-n="48" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="117.37" y="284.59" width="42.79" height="39.16" />
+  <rect id="t45" data-n="45" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="55.37" y="327.13" width="38.49" height="64.15" />
+  <rect id="t44" data-n="44" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="327.58" width="38.27" height="63.7" />
+  <rect id="t42" data-n="42" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="183.66" y="327.13" width="39.55" height="39.39" />
+  <rect id="t41" data-n="41" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="226.16" y="327.13" width="37.75" height="39.39" />
+  <polygon id="t43" data-n="43" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="163.13,327.56 138.01,327.56 138.01,366.52 180.72,366.52 180.72,327.13 163.13,327.13 163.13,327.56" />
+  <polygon id="t47" data-n="47" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="93.81,323.78 114.43,323.78 114.43,284.59 75.55,284.59 75.55,324.2 93.81,324.2 93.81,323.78" />
+  <polygon id="t40" data-n="40" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="284.77,327.56 305.72,327.56 305.72,366.52 266.84,366.52 266.84,327.13 284.77,327.13 284.77,327.56" />
+  <polygon id="t51" data-n="51" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="287.7,323.78 284.77,323.78 284.77,324.2 266.84,324.2 266.84,284.59 305.72,284.59 305.72,323.78 287.7,323.78" />
+  <rect id="t39" data-n="39" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="369.45" width="80.46" height="21.83" />
+  <polygon id="t34" data-n="34" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="350.24,369.45 350.24,391.28 424.4,391.28 430.06,388.7 430.06,385.42 464.61,369.45 350.24,369.45" />
+  <polygon id="t17" data-n="17" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="308.43,399.38 347.24,399.38 347.24,419.34 350.02,425.56 308.43,444.86 308.43,399.38" />
+  <polygon id="t16" data-n="16" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="350.24,399.38 350.24,418.76 352.74,424.37 406.52,399.38 350.24,399.38" />
+  <rect id="t18" data-n="18" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="266.84" y="399.38" width="38.88" height="29.49" />
+  <polygon id="t19" data-n="19" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="266.84,432.02 305.72,432.02 305.72,446.31 266.84,464.21 266.84,432.02" />
+  <polygon id="t22" data-n="22" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="263.9,457.51 223.09,457.51 223.09,451.6 205.14,451.6 205.14,492.57 263.9,465.53 263.9,457.51" />
+  <polygon id="t20" data-n="20" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="205.14,410.86 205.14,448.68 223.09,448.68 223.09,429.05 263.9,429.05 263.9,410.86 205.14,410.86" />
+  <rect id="t21" data-n="21" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="226.16" y="432.02" width="37.75" height="17.56" />
+  <polygon id="t24" data-n="24" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="183.79,410.86 183.79,446.16 138.01,446.16 138.01,468.82 145.56,468.82 147.1,468.63 148.84,469.13 150.03,470.18 150.6,471.19 201.52,471.19 201.52,410.86 183.79,410.86" />
+  <polygon id="t23" data-n="23" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="138.01,522.44 138.01,476.58 149.53,476.58 149.53,474.34 201.52,474.34 201.52,493.89 138.01,522.44" />
+  <rect id="t25" data-n="25" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="138.01" y="410.86" width="42.72" height="32.19" />
+  <rect id="t26" data-n="26" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="404.33" width="38.27" height="46.15" />
+  <rect id="t31" data-n="31" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="55.37" y="404.33" width="38.49" height="46.15" />
+  <rect id="t27" data-n="27" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="453.41" width="38.27" height="39.16" />
+  <rect id="t30" data-n="30" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="55.37" y="453.41" width="38.49" height="59.73" />
+  <polygon id="t32" data-n="32" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="28.42,444.15 25.53,444.15 25.53,435.17 52.67,435.17 52.67,444.15 47.99,444.15 47.99,480.42 31.16,480.42 28.42,477.65 28.42,444.15" />
+  <polygon id="t33" data-n="33" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="52.67,487.97 29.9,487.97 29.9,484.91 28.52,483.34 25.53,483.34 25.53,510.21 52.67,510.21 52.67,487.97" />
+  <polygon id="t28" data-n="28" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="96.8,495.5 96.8,541.2 135.07,524.02 135.07,495.5 96.8,495.5" />
+  <polygon id="t29" data-n="29" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="93.86,516.06 93.86,542.21 55.37,559.12 55.37,516.06 93.86,516.06" />
+  <polygon id="t1" data-n="1" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="56.05,562.19 104.21,540.75 127.38,590.36 110.4,598.13 74.79,602.8 56.05,562.19" />
+  <polygon id="t2" data-n="2" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="106.97,539.4 152.77,519.06 168.07,551.69 150.32,559.5 151.51,562.07 123.22,574.51 106.97,539.4" />
+  <polygon id="t3" data-n="3" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="123.47,574.61 135.47,600.54 158.98,597.42 160.63,596.57 162.35,595.01 163.46,593.26 164.03,591.55 164.15,590.85 184.79,588.13 169.23,554.55 154.32,561.09 123.47,574.61" />
+  <polygon id="t5" data-n="5" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="179.59,570.35 205.29,559.16 204.01,556.47 213.59,552.3 227.74,582.61 187.78,587.86 179.59,570.35" />
+  <polygon id="t6" data-n="6" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="217.34,553.73 276.29,527.62 296.77,571.69 297.35,573.6 230.64,582.39 217.34,553.73" />
+  <polygon id="t4" data-n="4" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="155.41,518.01 202.64,497.08 225.7,546.74 178.47,567.68 155.41,518.01" />
+  <polygon id="t7" data-n="7" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="205.36,495.34 228.61,484.92 251.7,535.14 228.45,545.54 205.36,495.34" />
+  <polygon id="t8" data-n="8" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="231.35,483.42 264.91,468.26 281.31,521.83 254.39,533.99 231.35,483.42" />
+  <polygon id="t10" data-n="10" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="284.92,523.71 323.84,506.38 330.35,520.34 289.51,538.49 284.92,523.71" />
+  <polygon id="t11" data-n="11" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="290.35,541.2 331.6,523.11 354.54,571.93 307.78,578.11 306.47,577.96 304.9,577.51 303.32,576.65 301.97,575.38 301.16,574.25 299.47,570.62 290.35,541.2" />
+  <polygon id="t9" data-n="9" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="267.52,466.79 283.98,520.86 324.25,502.65 301.06,451.6 267.52,466.79" />
+  <polygon id="t15" data-n="15" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" points="303.68,450.12 351.35,428.2 375.56,482.69 328.06,504.58 303.68,450.12" />
+  <rect id="t78.1" data-n="78.1" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.38" y="158.53" width="19.66" height="19.59" />
+  <rect id="t78.4" data-n="78.4" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="411.04" y="178.11" width="18.99" height="19.36" />
+  <rect id="t78.2" data-n="78.2" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="411.04" y="158.53" width="18.99" height="19.59" />
+  <rect id="t78.3" data-n="78.3" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.38" y="178.11" width="19.66" height="19.36" />
+  <rect id="t88" data-n="88" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="138.27" width="38.27" height="17.33" />
+  <rect id="t112" data-n="112" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="62.83" y="158.53" width="31.03" height="18.23" />
+  <rect id="t113" data-n="113" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="158.53" width="38.27" height="18.23" />
+  <rect id="t108" data-n="108" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="308.43" y="13.42" width="38.88" height="17.25" />
+  <rect id="t110" data-n="110" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="62.83" y="116.88" width="31.03" height="18.46" />
+  <rect id="t109" data-n="109" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="163.09" y="116.88" width="38.65" height="17.56" />
+  <rect id="t111" data-n="111" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="96.8" y="116.88" width="38.27" height="18.46" />
+  <rect id="t202" data-n="202" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="483.05" width="235.13" height="19.42" />
+  <rect id="t203" data-n="203" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="505.43" width="235.83" height="16.77" />
+  <rect id="t200" data-n="200" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="438.83" width="234.22" height="18.63" />
+  <rect id="t201" data-n="201" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="461.02" width="234.22" height="18.77" />
+  <rect id="t204" data-n="204" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="390.45" y="525.46" width="235.83" height="17.86" />
+  <rect id="t205" data-n="205" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="546.58" width="235.83" height="17.86" />
+  <rect id="t206" data-n="206" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="567.70" width="235.83" height="17.86" />
+  <rect id="t207" data-n="207" class="territorio" fill="#ffffff" stroke="#000" stroke-width="0.5" x="391.19" y="588.82" width="235.83" height="17.86" />
+</svg>

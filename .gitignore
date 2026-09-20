@@ -1,0 +1,10 @@
+*.accdb
+*.laccdb
+~$*
+logs/
+exports/
+data/
+Thumbs.db
+Desktop.ini
+.DS_Store
+.playwright-mcp/

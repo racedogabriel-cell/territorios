@@ -1,0 +1,1933 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2c3e50" />
+    <title>Salidas — cierre</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --primary-bg: #e8edf3;
+            --accent: #b78b1e;
+            --accent-bg: #fdf5e6;
+            --danger: #c62828;
+            --bg: #eceff3;
+            --card: #fff;
+            --text: #1a1a1a;
+            --muted: #5c6570;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(72px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        }
+        .top-bar { position: sticky; top: 0; z-index: 50; margin: -8px -10px 6px; padding: 8px 10px; background: linear-gradient(180deg, var(--bg) 75%, transparent); }
+        .title-block {
+            background: var(--primary);
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 12px;
+            border-bottom: 3px solid var(--accent);
+            box-shadow: 0 2px 10px rgba(0,0,0,.1);
+        }
+        .title-block h1 { font-size: 0.82rem; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; line-height: 1.2; }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .btn {
+            border: none; border-radius: 8px; padding: 9px 10px; font-size: 12px; font-weight: 800;
+            cursor: pointer; min-height: 40px; touch-action: manipulation;
+        }
+        .btn-primary { background: #1565c0; color: #fff; flex: 1; min-width: 100px; }
+        .btn-secondary { background: #eceff1; color: #263238; }
+        .hint { font-size: 10px; color: rgba(255,255,255,.72); margin-top: 6px; line-height: 1.3; }
+        .hint code { font-size: 9px; background: rgba(0,0,0,.2); padding: 1px 4px; border-radius: 3px; }
+        .day-section { margin-bottom: 10px; }
+        .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 2px 0 4px; }
+        .day-pill { flex-shrink: 0; padding: 3px 8px; border-radius: 6px; background: var(--primary-bg); color: var(--primary); font-weight: 900; font-size: 11px; letter-spacing: .02em; }
+        .day-pill.weekend { background: var(--accent-bg); color: #8a6d18; }
+        .day-line { flex: 1; height: 1px; background: #c5cdd6; }
+        .meeting-card { background: var(--card); border-radius: 8px; padding: 8px 10px; margin-bottom: 5px; border: 1px solid #dde3ea; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+        .meeting-card:nth-child(even) { background: #f9fafb; }
+        .meeting-grid { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); column-gap: 8px; align-items: start; }
+        .cell-time { text-align: right; padding-top: 1px; }
+        .time { font-size: 1.05rem; font-weight: 900; line-height: 1.1; color: var(--primary); font-variant-numeric: tabular-nums; }
+        .meta-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 5px; font-size: 12px; line-height: 1.28; }
+        .place { font-weight: 800; font-size: 13px; color: var(--text); }
+        .meta-sep { color: #9aa3ad; font-weight: 700; user-select: none; }
+        .group-tag { font-size: 10px; font-weight: 900; text-transform: uppercase; color: var(--primary); letter-spacing: .04em; }
+        .people { color: var(--muted); font-weight: 600; font-size: 11.5px; }
+        .chips-line { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+        .badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 26px; min-width: 26px; padding: 0 7px; background: var(--primary); color: #fff;
+            border-radius: 5px; font-size: 12px; font-weight: 900; border: 2px solid transparent;
+        }
+        .badge.note { background: var(--accent); }
+        .badge.danger-border { border-color: var(--danger); }
+        .badge.badge-pueblo {
+            background: #7b4f2e;
+            color: #fff;
+            font-size: 11px;
+            padding: 0 10px;
+            letter-spacing: 0.02em;
+        }
+        /* Acción registrada: borde según tipo (hecho / sin hacer / incompleto) */
+        .badge.pendiente-sync {
+            position: relative;
+            margin: 3px 2px;
+            outline: 3px solid #90a4ae;
+            outline-offset: 2px;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.95),
+                0 3px 12px rgba(0, 0, 0, 0.18);
+        }
+        .badge.accion-hecho,
+        .badge.accion-sin-hacer,
+        .badge.accion-incompleto {
+            position: relative;
+            margin: 3px 2px;
+            outline: 3px solid;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.95);
+        }
+        .badge.accion-hecho {
+            border-color: #2e7d32;
+            outline-color: #2e7d32;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.95),
+                0 3px 14px rgba(46, 125, 50, 0.5);
+        }
+        .badge.accion-sin-hacer {
+            border-color: #c62828;
+            outline-color: #c62828;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.95),
+                0 3px 14px rgba(198, 40, 40, 0.5);
+        }
+        .badge.accion-incompleto {
+            border-color: #ff3a99;
+            outline-color: #ff3a99;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.95),
+                0 3px 14px rgba(255, 58, 153, 0.5);
+        }
+        .badge.clickable { cursor: pointer; }
+        .badge.clickable:active { transform: scale(0.96); }
+        .alerts-compact { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; }
+        .alert-line { font-size: 10.5px; line-height: 1.25; padding: 3px 6px 3px 5px; border-radius: 4px; border-left: 2px solid; }
+        .alert-line.manz { background: #fdf8e8; border-left-color: var(--accent); color: #4a4030; }
+        .alert-line.nv { background: #fdeded; border-left-color: var(--danger); color: #5c2a2a; }
+        .alert-line .tag { font-weight: 900; margin-right: 3px; }
+        .empty, .error-msg { text-align: center; padding: 16px 10px; font-size: 13px; color: var(--muted); line-height: 1.4; }
+        .error-msg { color: #b00020; font-weight: 700; }
+        .modal-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none;
+            align-items: center; justify-content: center; z-index: 9999; padding: 16px;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            width: min(520px, 96vw); max-height: 90vh; overflow-y: auto;
+            background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 16px;
+        }
+        .modal-title { font-size: 1.1rem; font-weight: 900; color: #1a1a1a; margin-bottom: 8px; }
+        .modal-subtitle { font-size: 13px; color: #555; margin-bottom: 12px; }
+        .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .modal-btn {
+            border: none; border-radius: 8px; font-weight: 800; padding: 10px 12px; cursor: pointer; font-size: 13px;
+        }
+        .modal-btn-green { background: #2e7d32; color: #fff; }
+        .modal-btn-red { background: #c62828; color: #fff; }
+        .modal-btn-blue { background: #1565c0; color: #fff; }
+        .modal-btn-amber { background: #ef6c00; color: #fff; }
+        .modal-btn-gray { background: #eceff1; color: #263238; }
+        .modal-btn-save { background: #1565c0; color: #fff; width: 100%; box-sizing: border-box; }
+        .tm-guardar-wrap { margin-bottom: 10px; width: 100%; }
+        .modal-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; margin: 8px 0; }
+        .modal-error { color: #b00020; font-size: 13px; margin: 8px 0 0; min-height: 18px; }
+        .modal-error.modal-msg-ok { color: #1b5e20; font-weight: 700; }
+        .tm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .tm-grid .full { grid-column: 1 / -1; }
+        .tm-label { display: block; font-size: 12px; font-weight: 700; color: #455a64; margin-bottom: 4px; }
+        .tm-select { width: 100%; padding: 8px 10px; border: 1px solid #cfd8dc; border-radius: 8px; font-size: 14px; }
+
+        .tm-mapa-wrap { margin-bottom: 8px; }
+        .tm-mapa-title {
+            font-size: 11px; color: #455a64; font-weight: 700; margin-bottom: 5px;
+            text-transform: uppercase; letter-spacing: .2px;
+        }
+        #tm-mini-mapa {
+            width: 100%; height: 220px; border: 1px solid #d0d7de; border-radius: 8px;
+            background: #eef2f7;
+        }
+        .territorio-label { background: transparent !important; border: 0 !important; }
+        .territorio-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 26px; height: 24px; padding: 0 10px; border-radius: 999px;
+            border: 2px solid rgba(0, 0, 0, .24); background: #fff; color: #111;
+            font-size: 13px; font-weight: 900; line-height: 1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .2); white-space: nowrap;
+        }
+        .territorio-pill.sel {
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, .22), 0 1px 5px rgba(0, 0, 0, .24);
+        }
+
+        .tm-pendiente-banner {
+            background: #f3e5f5;
+            border: 1px solid #ce93d8;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #4a148c;
+        }
+        .tm-pendiente-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="title-block">
+        <h1 id="header-text">Salidas de predicación</h1>
+        <div class="actions">
+            <button type="button" class="btn btn-primary" id="btn-refresh">Actualizar</button>
+            <button type="button" class="btn btn-secondary" id="btn-agregados">Agregados</button>
+        </div>
+        <p class="hint" id="hint-text">Cargando desde <code>Supabase</code>…</p>
+    </div>
+</div>
+
+<div id="root"></div>
+
+<div id="territorio-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+        <div class="modal-title" id="tm-title">Territorio</div>
+        <div class="modal-subtitle" id="tm-subtitle">Elegí una acción</div>
+        <div id="tm-body"></div>
+        <div class="modal-error" id="tm-error"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./supabase.js"></script>
+<script>
+    const root = document.getElementById('root');
+    const headerText = document.getElementById('header-text');
+    const hintText = document.getElementById('hint-text');
+    const territorioModal = document.getElementById('territorio-modal');
+    const tmTitle = document.getElementById('tm-title');
+    const tmSubtitle = document.getElementById('tm-subtitle');
+    const tmBody = document.getElementById('tm-body');
+    const tmError = document.getElementById('tm-error');
+
+    let salidasRows = [];
+    let catalogoResponsables = [];
+    let catalogoTerritorios = [];
+    let catalogoDescripciones = {};
+    let tmAgregadosCache = null;
+    let territorioSeleccionado = '';
+    let tmSalidaCtxPersisted = null;
+    let tmAjusteSalida = null;
+    const descripcionPorNumeroMemo = {};
+
+    /** Respaldo si el snapshot de Supabase aún no trae Descripcion (hasta re-publicar). */
+    const FALLBACK_DESCRIPCIONES_PUEBLO = {
+        '200': 'Cadret',
+        '201': 'Algarrobo',
+        '202': 'Moctezuma',
+        '203': 'Hirch',
+        '204': 'Smith',
+        '205': 'Hortencia',
+        '206': 'Ordoqui',
+        '207': 'Santo Tomas'
+    };
+
+    let tmMetaCache = null;
+    let tmTerritoriosCache = null;
+    let tmDatosCache = null;
+    let tmMiniMapa = null;
+    let tmMiniMapaLayer = null;
+
+    /** Ultima lectura de acciones_colaboradores con procesado=false (una fila por territorio, la mas reciente por creado_en). */
+    let pendientesSupabasePorNumero = new Map();
+
+    const TIPOS_PENDIENTE_VISTA = new Set([
+        'cerrar-sin-hecho',
+        'cerrar-con-accion',
+        'guardar-edicion-salida',
+        'agregado-accion'
+    ]);
+
+    function tipoPendienteAfectaVista(tipo) {
+        return TIPOS_PENDIENTE_VISTA.has(String(tipo || ''));
+    }
+
+    function mapaPendientesEfectivo() {
+        const map = new Map();
+        for (const [num, row] of pendientesSupabasePorNumero) {
+            map.set(num, { row });
+        }
+        return map;
+    }
+
+    function payloadDesdePendienteEnt(ent) {
+        return (ent && ent.row && ent.row.payload) || {};
+    }
+
+    function tipoDesdePendienteEnt(ent) {
+        return ent && ent.row ? ent.row.tipo : '';
+    }
+
+    function idSupabasePendienteParaNumero(numero) {
+        const ent = mapaPendientesEfectivo().get(String(numero).trim());
+        if (!ent || !ent.row) return null;
+        const id = ent.row.id;
+        return id == null ? null : id;
+    }
+
+    function etiquetaAccionCierre(accion) {
+        const a = String(accion || '').trim();
+        if (a === 'completado') return 'Completado';
+        if (a === 'incompleto') return 'Incompleto';
+        if (a === 'completado-campana') return 'Completado en campaña';
+        return a || 'Acción';
+    }
+
+    async function refrescarPendientesSiSupabase() {
+        pendientesSupabasePorNumero = new Map();
+        if (!window.TerritoriosSupabase || typeof window.TerritoriosSupabase.listarAccionesPendientes !== 'function') {
+            return;
+        }
+        try {
+            const rows = await window.TerritoriosSupabase.listarAccionesPendientes();
+            if (!Array.isArray(rows)) return;
+            for (const row of rows) {
+                if (!row || !tipoPendienteAfectaVista(row.tipo)) continue;
+                const num = String((row.payload && row.payload.numero) || '').trim();
+                if (!num) continue;
+                const prev = pendientesSupabasePorNumero.get(num);
+                const tNew = row.creado_en ? new Date(row.creado_en).getTime() : 0;
+                const tPrev = prev && prev.creado_en ? new Date(prev.creado_en).getTime() : -1;
+                if (!prev || tNew >= tPrev) pendientesSupabasePorNumero.set(num, row);
+            }
+        } catch (err) {
+            console.warn('No se pudieron cargar acciones pendientes en Supabase:', err);
+        }
+    }
+
+    function filasSalidasParaVista() {
+        const map = mapaPendientesEfectivo();
+        const base = salidasRows.slice();
+        const nums = new Set(base.map((r) => String(r.NumeroTerritorio || '').trim()));
+        for (const [num, ent] of map) {
+            if (tipoDesdePendienteEnt(ent) !== 'agregado-accion') continue;
+            if (nums.has(num)) continue;
+            const p = payloadDesdePendienteEnt(ent);
+            const fecha = String(p.fecha || '').trim();
+            const env = fecha ? (fecha.includes('T') ? fecha : fecha + 'T12:00:00') : '2099-01-01T12:00:00';
+            base.push({
+                NumeroTerritorio: p.numero || num,
+                PuntosDeEncuentros: '\u2014',
+                Responsables: p.responsable || '',
+                Grupos: '',
+                Enviado: env,
+                Prioridad: 9999,
+                ManzanasPendientes: p.accion === 'incompleto' ? (p.manzanasPendientes || '') : '',
+                Direccion: '',
+                Descripcion: descripcionTerritorio(p.numero || num) || ''
+            });
+            nums.add(num);
+        }
+        return base;
+    }
+
+    function claseBordeAccionPendiente(tipo, pay) {
+        const t = String(tipo || '').trim();
+        if (t === 'cerrar-sin-hecho') return 'accion-sin-hacer';
+        if (t === 'cerrar-con-accion' || t === 'agregado-accion') {
+            const acc = String((pay && pay.accion) || '').trim();
+            if (acc === 'incompleto') return 'accion-incompleto';
+            if (acc === 'completado' || acc === 'completado-campana') return 'accion-hecho';
+        }
+        return '';
+    }
+
+    function aplicarPendientesAParseRows(parsed) {
+        const map = mapaPendientesEfectivo();
+        return parsed.map((it) => {
+            const ent = map.get(String(it.t).trim());
+            if (!ent) return it;
+            const tipo = tipoDesdePendienteEnt(ent);
+            const pay = payloadDesdePendienteEnt(ent);
+            const out = Object.assign({}, it);
+            let tituloPend = '';
+            if (tipo === 'guardar-edicion-salida') {
+                if (pay.responsableAjuste) out.r = pay.responsableAjuste;
+                if (pay.enviadoAjuste) {
+                    const raw = String(pay.enviadoAjuste).trim().replace(' ', 'T');
+                    const d = new Date(raw);
+                    if (!isNaN(d)) out.d = d;
+                }
+                tituloPend = 'Ajuste de salida pendiente de sincronizar con Access';
+            } else if (tipo === 'cerrar-sin-hecho') {
+                tituloPend = 'Sin hacer — pendiente de sincronizar con Access';
+            } else if (tipo === 'cerrar-con-accion') {
+                const acc = String(pay.accion || '').trim();
+                if (acc === 'incompleto') out.m = pay.manzanasPendientes || '';
+                else out.m = '';
+                tituloPend = etiquetaAccionCierre(pay.accion) + ' — pendiente de sincronizar';
+            } else if (tipo === 'agregado-accion') {
+                const acc = String(pay.accion || '').trim();
+                if (acc === 'incompleto') out.m = pay.manzanasPendientes || '';
+                else out.m = '';
+                tituloPend = 'Agregado manual: ' + etiquetaAccionCierre(pay.accion) + ' — pendiente';
+            }
+            out._pendienteTitulo = tituloPend;
+            out._pendienteSync = true;
+            out._accionBorde = claseBordeAccionPendiente(tipo, pay);
+            return out;
+        });
+    }
+
+    function htmlBannerPendienteTerritorio(numero) {
+        const n = String(numero || '').trim();
+        const ent = mapaPendientesEfectivo().get(n);
+        if (!ent) return '';
+        const tipo = tipoDesdePendienteEnt(ent);
+        const p = payloadDesdePendienteEnt(ent);
+        const cabezas = [];
+        if (tipo === 'cerrar-sin-hecho') cabezas.push('Cierre: <strong>Sin hacer</strong>.');
+        else if (tipo === 'cerrar-con-accion') cabezas.push('Cierre: <strong>' + escapeHtml(etiquetaAccionCierre(p.accion)) + '</strong>.');
+        else if (tipo === 'guardar-edicion-salida') cabezas.push('Hay un <strong>ajuste de salida</strong> guardado como pendiente.');
+        else if (tipo === 'agregado-accion') cabezas.push('Hay un <strong>agregado manual</strong> pendiente.');
+        cabezas.push(
+            'Estado en <strong>Supabase</strong> (aún no aplicado en Access). Podés modificar la acción o eliminarla antes de ejecutar <code>Sync-SupabaseToAccess.ps1</code>.'
+        );
+        let btn = '';
+        if (ent.row && ent.row.id != null) {
+            btn =
+                '<button type="button" class="modal-btn modal-btn-red" id="tm-eliminar-pendiente">Eliminar pendiente en Supabase</button>';
+        }
+        return (
+            '<div class="tm-pendiente-banner" id="tm-pendiente-banner">' +
+            cabezas.join(' ') +
+            '<div class="tm-pendiente-actions">' +
+            btn +
+            '</div></div>'
+        );
+    }
+
+    async function eliminarPendienteTerritorioActual() {
+        const supa = window.TerritoriosSupabase;
+        if (!supa) {
+            throw new Error('Módulo Supabase no cargado.');
+        }
+        const num = String(territorioSeleccionado || '').trim();
+        if (!num) {
+            throw new Error('Territorio no seleccionado.');
+        }
+        const id = idSupabasePendienteParaNumero(num);
+        if (typeof supa.eliminarAccionesPendientesPorNumero === 'function') {
+            try {
+                await supa.eliminarAccionesPendientesPorNumero(num);
+                return;
+            } catch (errPorNumero) {
+                if (!id || typeof supa.eliminarAccion !== 'function') throw errPorNumero;
+                const msg = String(errPorNumero && errPorNumero.message ? errPorNumero.message : errPorNumero);
+                if (!/No se eliminó ninguna/i.test(msg)) throw errPorNumero;
+            }
+        }
+        if (!id || typeof supa.eliminarAccion !== 'function') {
+            throw new Error('No hay acción pendiente identificada para este territorio.');
+        }
+        await supa.eliminarAccion(id);
+    }
+
+    function adjuntarEliminarPendienteSiCorresponde() {
+        const btnDel = document.getElementById('tm-eliminar-pendiente');
+        if (!btnDel) return;
+        btnDel.addEventListener('click', async () => {
+            if (!window.TerritoriosSupabase) {
+                tmError.textContent = 'Error: módulo Supabase no cargado.';
+                return;
+            }
+            if (!confirm('¿Eliminar esta acción pendiente en Supabase? El territorio volverá a mostrarse como antes en esta vista.')) return;
+            tmError.textContent = '';
+            tmError.classList.remove('modal-msg-ok');
+            btnDel.disabled = true;
+            try {
+                await eliminarPendienteTerritorioActual();
+                await refrescarPendientesSiSupabase();
+                renderDesdeSalidas();
+                cerrarModalTerritorio();
+            } catch (e) {
+                tmError.textContent = 'Error: ' + (e && e.message ? e.message : e);
+            } finally {
+                btnDel.disabled = false;
+            }
+        });
+    }
+
+    function limpiarMiniMapa() {
+        if (tmMiniMapaLayer && tmMiniMapa) {
+            try {
+                tmMiniMapa.removeLayer(tmMiniMapaLayer);
+            } catch (_) {}
+            tmMiniMapaLayer = null;
+        }
+        if (tmMiniMapa) {
+            try {
+                tmMiniMapa.remove();
+            } catch (_) {}
+            tmMiniMapa = null;
+        }
+    }
+
+    function normalizarBundle(json) {
+        if (Array.isArray(json)) {
+            return { salidas: json, responsables: [], territorios: [], descripciones: {} };
+        }
+        if (json && typeof json === 'object' && Array.isArray(json.salidas)) {
+            const descripciones = {};
+            if (json.descripciones && typeof json.descripciones === 'object') {
+                for (const [k, v] of Object.entries(json.descripciones)) {
+                    const num = String(k || '').trim();
+                    const desc = String(v || '').trim();
+                    if (num && desc) descripciones[num] = desc;
+                }
+            }
+            return {
+                salidas: json.salidas,
+                responsables: Array.isArray(json.responsables) ? json.responsables : [],
+                territorios: Array.isArray(json.territorios) ? json.territorios : [],
+                descripciones
+            };
+        }
+        throw new Error('Formato inválido: se esperaba un array o un objeto con "salidas".');
+    }
+
+    function parseRows(rows) {
+        if (!Array.isArray(rows)) return [];
+        function parseFechaFlexible(v) {
+            if (!v) return new Date('');
+            const txt = String(v).trim();
+            let d = new Date(txt);
+            if (!isNaN(d)) return d;
+            d = new Date(txt.replace('T', ' ').replace(/-/g, '/'));
+            return d;
+        }
+        return rows.map(item => ({
+            t: item.NumeroTerritorio || '',
+            p: item.PuntosDeEncuentros || '',
+            r: item.Responsables || '',
+            g: item.Grupos || '',
+            d: parseFechaFlexible(item.Enviado),
+            pr: Number.isFinite(Number(item.Prioridad)) ? Number(item.Prioridad) : NaN,
+            m: item.ManzanasPendientes || '',
+            nv: item.Direccion || '',
+            desc: String(item.Descripcion || item.descripcion || '').trim()
+        })).filter(x => !isNaN(x.d)).sort((a, b) => a.d - b.d);
+    }
+
+    function escapeHtml(txt) {
+        return String(txt ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function fechaLocalDesdeDate(d) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    function horaLocalDesdeDate(d) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function esTerritorioPueblo(t) {
+        const n = parseInt(t, 10);
+        return !isNaN(n) && n >= 200;
+    }
+    function descripcionTerritorio(numero, fallbackDesc) {
+        const num = String(numero ?? '').trim();
+        const direct = String(fallbackDesc ?? '').trim();
+        if (direct) {
+            descripcionPorNumeroMemo[num] = direct;
+            return direct;
+        }
+        if (descripcionPorNumeroMemo[num]) return descripcionPorNumeroMemo[num];
+        if (catalogoDescripciones[num]) {
+            descripcionPorNumeroMemo[num] = catalogoDescripciones[num];
+            return catalogoDescripciones[num];
+        }
+        if (tmAgregadosCache && tmAgregadosCache.descripcionPorNumero) {
+            const fromAgg = String(tmAgregadosCache.descripcionPorNumero[num] || '').trim();
+            if (fromAgg) {
+                descripcionPorNumeroMemo[num] = fromAgg;
+                return fromAgg;
+            }
+        }
+        const fromSalida = salidasRows.find((r) => {
+            const n = String(r.NumeroTerritorio || '').trim();
+            return n === num && String(r.Descripcion || r.descripcion || '').trim();
+        });
+        if (fromSalida) {
+            const d = String(fromSalida.Descripcion || fromSalida.descripcion || '').trim();
+            descripcionPorNumeroMemo[num] = d;
+            return d;
+        }
+        if (FALLBACK_DESCRIPCIONES_PUEBLO[num]) return FALLBACK_DESCRIPCIONES_PUEBLO[num];
+        return '';
+    }
+    function etiquetaTerritorio(numero, fallbackDesc) {
+        const desc = descripcionTerritorio(numero, fallbackDesc);
+        if (desc) return desc;
+        return esTerritorioPueblo(numero) ? `Pueblo T-${numero}` : String(numero ?? '');
+    }
+    function tituloModalTerritorio(numero) {
+        const desc = descripcionTerritorio(numero);
+        if (esTerritorioPueblo(numero)) {
+            return desc ? `${desc} (T-${numero})` : `Pueblo (T-${numero})`;
+        }
+        return `Territorio ${numero}`;
+    }
+    function htmlBadgeTerritorioSalida(it) {
+        const esPueblo = esTerritorioPueblo(it.t);
+        let cls = 'badge clickable';
+        if (esPueblo) cls += ' badge-pueblo';
+        if (it.m) cls += ' note';
+        if (it.nv) cls += ' danger-border';
+        if (it._pendienteSync) cls += ' pendiente-sync';
+        if (it._accionBorde) cls += ' ' + it._accionBorde;
+        const ef = fechaLocalDesdeDate(it.d);
+        const eh = horaLocalDesdeDate(it.d);
+        const labelTxt = etiquetaTerritorio(it.t, it.desc);
+        const label = escapeHtml(labelTxt);
+        const attrs = `class="${cls}" data-territorio="${escapeHtml(it.t)}" data-descripcion="${escapeHtml(it.desc || labelTxt)}" data-env-fecha="${ef}" data-env-hora="${eh}" data-responsable="${escapeHtml(it.r)}"`;
+        return '<span ' + attrs + '>' + label + '</span>';
+    }
+
+    function sembrarDescripcionesDesdeSalidas(rows) {
+        if (!Array.isArray(rows)) return;
+        for (const row of rows) {
+            const num = String(row.NumeroTerritorio || '').trim();
+            const desc = String(row.Descripcion || row.descripcion || '').trim();
+            if (num && desc) {
+                descripcionPorNumeroMemo[num] = desc;
+                catalogoDescripciones[num] = desc;
+            }
+        }
+    }
+
+    function renderLista(data) {
+        if (data.length === 0) {
+            headerText.textContent = 'Salidas de predicación';
+            root.innerHTML = '<div class="empty">No hay salidas con fecha válida.</div>';
+            return;
+        }
+        const d1 = data[0].d;
+        const d2 = data[data.length - 1].d;
+        headerText.textContent = `Salidas • ${d1.getDate()}/${d1.getMonth() + 1} al ${d2.getDate()}/${d2.getMonth() + 1}`;
+
+        const daysMap = new Map();
+        data.forEach(it => {
+            const dK = it.d.toDateString();
+            if (!daysMap.has(dK)) daysMap.set(dK, new Map());
+            const tStr = it.d.getHours() + ':' + String(it.d.getMinutes()).padStart(2, '0');
+            const meetKey = tStr + '|' + it.p + '|' + (it.g || '');
+            if (!daysMap.get(dK).has(meetKey)) {
+                daysMap.get(dK).set(meetKey, { time: tStr, place: it.p, items: [] });
+            }
+            daysMap.get(dK).get(meetKey).items.push(it);
+        });
+
+        const dNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        let html = '';
+
+        daysMap.forEach((meetings, dayKey) => {
+            const dObj = new Date(dayKey);
+            const isW = dObj.getDay() === 0 || dObj.getDay() === 6;
+            const dayLabel = `${dNames[dObj.getDay()]} ${dObj.getDate()}`;
+            html += `<section class="day-section">`;
+            html += `<div class="day-head"><span class="day-pill ${isW ? 'weekend' : ''}">${escapeHtml(dayLabel)}</span><div class="day-line" aria-hidden="true"></div></div>`;
+
+            meetings.forEach(m => {
+                m.items.sort((a, b) => {
+                    const pa = isNaN(a.pr) ? Number.MAX_SAFE_INTEGER : a.pr;
+                    const pb = isNaN(b.pr) ? Number.MAX_SAFE_INTEGER : b.pr;
+                    return pa - pb;
+                });
+                const resps = [...new Set(m.items.map(i => i.r))].join(' / ');
+                const groupName = m.items[0].g;
+                const isCongregacional = !groupName || groupName.toLowerCase() === 'congregacional';
+
+                html += `<article class="meeting-card"><div class="meeting-grid">`;
+                html += `<div class="cell-time"><div class="time">${escapeHtml(m.time)}</div></div><div class="cell-body">`;
+                html += `<div class="meta-line"><span class="place">${escapeHtml(m.place)}</span>`;
+                if (!isCongregacional) {
+                    html += `<span class="meta-sep">·</span><span class="group-tag">${escapeHtml(groupName)}</span>`;
+                }
+                if (resps) html += `<span class="meta-sep">·</span><span class="people">${escapeHtml(resps)}</span>`;
+                html += `</div><div class="chips-line">`;
+                m.items.forEach((it) => {
+                    html += htmlBadgeTerritorioSalida(it);
+                });
+                html += `</div>`;
+                const manzLines = m.items.filter(i => i.m);
+                const nvLines = m.items.filter(i => i.nv);
+                if (manzLines.length || nvLines.length) {
+                    html += `<div class="alerts-compact">`;
+                    manzLines.forEach(i => {
+                        html += `<div class="alert-line manz"><span class="tag">T${escapeHtml(i.t)}</span>${escapeHtml(i.m)}</div>`;
+                    });
+                    nvLines.forEach(i => {
+                        html += `<div class="alert-line nv"><span class="tag">T${escapeHtml(i.t)}</span>No visitar: ${escapeHtml(i.nv)}</div>`;
+                    });
+                    html += `</div>`;
+                }
+                html += `</div></div></article>`;
+            });
+            html += `</section>`;
+        });
+
+        root.innerHTML = html;
+        root.querySelectorAll('.badge.clickable').forEach((el) => {
+            el.addEventListener('click', onBadgeTerritorioClick);
+        });
+    }
+
+    function renderDesdeSalidas() {
+        renderLista(aplicarPendientesAParseRows(parseRows(filasSalidasParaVista())));
+    }
+
+    function esErrorSupabaseDatos(err) {
+        const msg = String(err && err.message ? err.message : err);
+        return msg.includes('SUPABASE_SIN_DATOS') ||
+            msg.includes('SUPABASE_CONFIG') ||
+            /datos_semana/i.test(msg);
+    }
+
+    function mostrarEstadoSinDatosSupabase() {
+        headerText.textContent = 'Sin datos en Supabase';
+        root.innerHTML =
+            '<div class="empty">' +
+            '<strong>No hay salidas publicadas.</strong><br><br>' +
+            'La tabla <code>datos_semana</code> está vacía o el JSON no trae filas en <code>salidas</code>.<br><br>' +
+            '1. En Supabase → SQL Editor ejecutá <code>sql/create_tables.sql</code><br>' +
+            '2. Desde <code>mapa.html</code> (PC) usá <strong>Enviar a Supabase</strong>.<br>' +
+            '3. Pulsá <strong>Actualizar</strong> en esta página.' +
+            '</div>';
+        hintText.innerHTML =
+            'Publicá datos en <code>datos_semana</code> desde la PC (mapa: <strong>Enviar a Supabase</strong>) y pulsá <strong>Actualizar</strong>.';
+    }
+
+    function mostrarErrorSupabase(err) {
+        headerText.textContent = 'Salidas de predicación';
+        const msg = escapeHtml(String(err && err.message ? err.message : err));
+        root.innerHTML =
+            '<div class="error-msg">' + msg + '</div>';
+        hintText.innerHTML =
+            'Revisá <code>Netlify/supabase.js</code> (URL y ANON KEY) y las políticas RLS. Ver <code>SUPABASE.md</code>.';
+    }
+
+    function ordenarSalidasRows() {
+        salidasRows.sort((a, b) => {
+            const ta = String(a.Enviado || '').replace(' ', 'T');
+            const tb = String(b.Enviado || '').replace(' ', 'T');
+            const da = new Date(ta);
+            const db = new Date(tb);
+            return (isNaN(da) ? 0 : da.getTime()) - (isNaN(db) ? 0 : db.getTime());
+        });
+    }
+
+    function esEntornoLocal() {
+        const h = window.location.hostname;
+        return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+    }
+
+    async function apiFunciona() {
+        if (!esEntornoLocal()) return false;
+        try {
+            const r = await fetch('/api/form-data', { cache: 'no-store' });
+            return r.ok;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    async function postApi(path, body) {
+        const resp = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok || j.ok === false) {
+            throw new Error(j.error || j.message || 'HTTP ' + resp.status);
+        }
+        return j;
+    }
+
+    async function aplicarAccion(tipo, payload, opts) {
+        opts = opts || {};
+        const reemplazarId = opts.reemplazarSupabaseId;
+        const online = await apiFunciona();
+        if (online) {
+            if (tipo === 'cerrar-sin-hecho') await postApi('/api/territorios/cerrar-sin-hecho', payload);
+            else if (tipo === 'cerrar-con-accion') await postApi('/api/territorios/cerrar-con-accion', payload);
+            else if (tipo === 'guardar-edicion-salida') await postApi('/api/territorios/guardar-edicion-salida', payload);
+            else if (tipo === 'agregado-accion') await postApi('/api/territorios/agregado-accion', payload);
+            else throw new Error('Tipo ' + tipo);
+            return 'api';
+        }
+        const supa = window.TerritoriosSupabase;
+        if (!supa || typeof supa.guardarAccion !== 'function') {
+            throw new Error('Sin servidor local (/api) ni módulo Supabase para guardar la acción.');
+        }
+        if (reemplazarId != null && typeof supa.actualizarAccion === 'function') {
+            try {
+                await supa.actualizarAccion(reemplazarId, tipo, payload);
+                await refrescarPendientesSiSupabase();
+                return 'supabase';
+            } catch (err) {
+                const msg = err && err.message ? err.message : String(err);
+                throw new Error('No se pudo actualizar la acción en Supabase: ' + msg);
+            }
+        }
+        try {
+            await supa.guardarAccion(tipo, payload);
+            await refrescarPendientesSiSupabase();
+            return 'supabase';
+        } catch (err) {
+            const msg = err && err.message ? err.message : String(err);
+            throw new Error('No se pudo guardar en Supabase: ' + msg);
+        }
+    }
+
+    function leerTmAjusteSalidaDesdeInputs() {
+        const respEl = document.getElementById('tm-edit-responsable');
+        const fechaEl = document.getElementById('tm-edit-fecha');
+        const horaEl = document.getElementById('tm-edit-hora');
+        if (!respEl || !fechaEl || !horaEl) return tmAjusteSalida;
+        return {
+            responsable: (respEl.value || '').trim(),
+            fecha: (fechaEl.value || '').trim(),
+            hora: (horaEl.value || '').trim()
+        };
+    }
+
+    function construirPayloadAjusteSalida() {
+        const a = tmAjusteSalida;
+        if (!a || !a.fecha || !a.hora) return {};
+        return {
+            responsableAjuste: (a.responsable || '').trim(),
+            enviadoAjuste: `${a.fecha}T${a.hora}:00`
+        };
+    }
+
+    function construirPayloadAjusteSalidaFlexible() {
+        const a = tmAjusteSalida;
+        if (!a) return {};
+        const out = {};
+        const resp = (a.responsable || '').trim();
+        if (resp) out.responsableAjuste = resp;
+        if (a.fecha && a.hora) out.enviadoAjuste = `${a.fecha}T${a.hora}:00`;
+        return out;
+    }
+
+    async function guardarEdicionSalidaModal() {
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
+        const flex = construirPayloadAjusteSalidaFlexible();
+        if (!flex.responsableAjuste && !flex.enviadoAjuste) {
+            tmError.textContent = 'Indicá responsable y/o fecha y hora para guardar.';
+            return;
+        }
+        try {
+            const rid = idSupabasePendienteParaNumero(territorioSeleccionado);
+            const modo = await aplicarAccion(
+                'guardar-edicion-salida',
+                { numero: territorioSeleccionado, ...flex },
+                { reemplazarSupabaseId: rid }
+            );
+            tmSalidaCtxPersisted = { ...tmAjusteSalida };
+            if (modo === 'api') {
+                await recargarDatosPreferApi();
+            } else {
+                salidasRows.forEach((row) => {
+                    if (String(row.NumeroTerritorio || '').trim() !== territorioSeleccionado) return;
+                    if (flex.responsableAjuste) row.Responsables = flex.responsableAjuste;
+                    if (flex.enviadoAjuste) row.Enviado = flex.enviadoAjuste;
+                });
+                renderDesdeSalidas();
+            }
+            tmError.classList.add('modal-msg-ok');
+            tmError.textContent = modo === 'api' ? 'Cambios guardados.' : 'Cambios guardados en Supabase.';
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    async function onBadgeTerritorioClick(ev) {
+        const badge = ev.currentTarget;
+        const numero = (badge.dataset.territorio || '').trim();
+        if (!numero) return;
+        const ctx = {
+            responsable: (badge.dataset.responsable || '').trim(),
+            fecha: (badge.dataset.envFecha || '').trim(),
+            hora: (badge.dataset.envHora || '').trim(),
+            descripcion: (badge.dataset.descripcion || '').trim()
+        };
+        await abrirModalTerritorio(numero, ctx);
+    }
+
+    async function obtenerCatalogo() {
+        if (tmAgregadosCache) return tmAgregadosCache;
+        if (catalogoResponsables.length && catalogoTerritorios.length) {
+            tmAgregadosCache = {
+                responsables: catalogoResponsables,
+                territorios: catalogoTerritorios,
+                descripcionPorNumero: { ...catalogoDescripciones }
+            };
+            return tmAgregadosCache;
+        }
+        const online = esEntornoLocal() && (await apiFunciona());
+        if (!online) {
+            tmAgregadosCache = {
+                responsables: catalogoResponsables,
+                territorios: catalogoTerritorios,
+                descripcionPorNumero: { ...catalogoDescripciones }
+            };
+            return tmAgregadosCache;
+        }
+        const [rForm, rTerr] = await Promise.all([
+            fetch('/api/form-data', { cache: 'no-store' }),
+            fetch('/api/territorios', { cache: 'no-store' })
+        ]);
+        if (!rForm.ok) throw new Error('HTTP ' + rForm.status + ' en /api/form-data');
+        if (!rTerr.ok) throw new Error('HTTP ' + rTerr.status + ' en /api/territorios');
+        const form = await rForm.json();
+        const terr = await rTerr.json();
+        const responsablesRaw = form?.responsables;
+        const responsables = [];
+        if (Array.isArray(responsablesRaw)) {
+            for (const item of responsablesRaw) {
+                const txt = String(item ?? '').trim();
+                if (!txt) continue;
+                const partes = txt.split(',').map((s) => s.trim()).filter(Boolean);
+                if (partes.length > 1) for (const p of partes) responsables.push(p);
+                else responsables.push(txt);
+            }
+        } else if (typeof responsablesRaw === 'string') {
+            responsables.push(...responsablesRaw.split(',').map((s) => s.trim()).filter(Boolean));
+        }
+        const responsablesUnicos = [...new Set(responsables)];
+        const territorios = Array.isArray(terr) ? terr.map((t) => String(t?.numero || '').trim()).filter(Boolean) : [];
+        territorios.sort((a, b) => Number(a) - Number(b));
+        const descripcionPorNumero = { ...catalogoDescripciones };
+        if (Array.isArray(terr)) {
+            for (const t of terr) {
+                const num = String(t?.numero || '').trim();
+                const desc = String(t?.descripcion ?? t?.Descripcion ?? '').trim();
+                if (!num || !desc) continue;
+                descripcionPorNumero[num] = desc;
+                catalogoDescripciones[num] = desc;
+                descripcionPorNumeroMemo[num] = desc;
+            }
+        }
+        tmAgregadosCache = { responsables: responsablesUnicos, territorios, descripcionPorNumero };
+        return tmAgregadosCache;
+    }
+
+    async function abrirModalTerritorio(numero, ctx) {
+        limpiarMiniMapa();
+        territorioSeleccionado = numero;
+        tmAgregadosCache = null;
+        if (ctx && ctx.descripcion) descripcionTerritorio(numero, ctx.descripcion);
+        if (ctx && ctx.fecha) {
+            tmSalidaCtxPersisted = { responsable: ctx.responsable || '', fecha: ctx.fecha, hora: ctx.hora || '' };
+            tmAjusteSalida = { ...tmSalidaCtxPersisted };
+        } else if (!tmAjusteSalida || !tmAjusteSalida.fecha) {
+            tmAjusteSalida = tmSalidaCtxPersisted ? { ...tmSalidaCtxPersisted } : { responsable: '', fecha: '', hora: '' };
+        }
+        tmTitle.textContent = tituloModalTerritorio(numero);
+        const nombrePueblo = descripcionTerritorio(numero, ctx && ctx.descripcion);
+        tmSubtitle.textContent = esTerritorioPueblo(numero)
+            ? ((nombrePueblo ? nombrePueblo + ' · ' : '') + 'elegí una acción')
+            : 'Elegí una acción';
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmBody.innerHTML = '<div style="padding:12px;color:#607d8b">Cargando…</div>';
+        territorioModal.classList.add('open');
+        territorioModal.setAttribute('aria-hidden', 'false');
+        const a = tmAjusteSalida;
+        const ban = htmlBannerPendienteTerritorio(numero);
+        try {
+            const data = await obtenerCatalogo();
+            const sinCatalogo = !data.responsables.length;
+            let opts = data.responsables.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+            if (a.responsable && !data.responsables.some((x) => x === a.responsable)) {
+                opts = `<option value="${escapeHtml(a.responsable)}">${escapeHtml(a.responsable)}</option>` + opts;
+            }
+            const campoResp = sinCatalogo
+                ? `<input id="tm-edit-responsable" class="modal-input" type="text" value="${escapeHtml(a.responsable)}" placeholder="Responsable" />`
+                : `<select id="tm-edit-responsable" class="tm-select">${opts}</select>`;
+            tmBody.innerHTML = ban + `
+                <div class="tm-grid tm-edit-salida">
+                    <div class="full">
+                        <label class="tm-label" for="tm-edit-responsable">Responsable</label>
+                        ${campoResp}
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-edit-fecha">Fecha de salida</label>
+                        <input id="tm-edit-fecha" class="tm-select" type="date" value="${escapeHtml(a.fecha)}">
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-edit-hora">Hora</label>
+                        <input id="tm-edit-hora" class="tm-select" type="time" value="${escapeHtml(a.hora)}">
+                    </div>
+                </div>
+                <div class="tm-guardar-wrap">
+                    <button type="button" class="modal-btn modal-btn-save" id="tm-guardar-salida">Guardar cambios</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-green" id="tm-hecho">Hecho</button>
+                    <button class="modal-btn modal-btn-red" id="tm-sin-hacer">Sin hacer</button>
+                    <button class="modal-btn modal-btn-gray" id="tm-cancelar">Cancelar</button>
+                </div>`;
+            const sel = document.getElementById('tm-edit-responsable');
+            if (sel && !sinCatalogo && a.responsable) sel.value = a.responsable;
+        } catch (e) {
+            tmBody.innerHTML = ban + `
+                <div class="tm-grid tm-edit-salida">
+                    <div class="full">
+                        <label class="tm-label" for="tm-edit-responsable">Responsable</label>
+                        <input id="tm-edit-responsable" class="modal-input" type="text" value="${escapeHtml(a.responsable)}" />
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-edit-fecha">Fecha de salida</label>
+                        <input id="tm-edit-fecha" class="tm-select" type="date" value="${escapeHtml(a.fecha)}">
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-edit-hora">Hora</label>
+                        <input id="tm-edit-hora" class="tm-select" type="time" value="${escapeHtml(a.hora)}">
+                    </div>
+                </div>
+                <div class="modal-error" style="margin-bottom:8px">Catálogo: ${escapeHtml(e.message)}</div>
+                <div class="tm-guardar-wrap">
+                    <button type="button" class="modal-btn modal-btn-save" id="tm-guardar-salida">Guardar cambios</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-green" id="tm-hecho">Hecho</button>
+                    <button class="modal-btn modal-btn-red" id="tm-sin-hacer">Sin hacer</button>
+                    <button class="modal-btn modal-btn-gray" id="tm-cancelar">Cancelar</button>
+                </div>`;
+        }
+        document.getElementById('tm-guardar-salida').addEventListener('click', guardarEdicionSalidaModal);
+        document.getElementById('tm-hecho').addEventListener('click', mostrarOpcionesHecho);
+        document.getElementById('tm-sin-hacer').addEventListener('click', async () => {
+            await ejecutarAccionTerritorio('sin-hacer');
+        });
+        document.getElementById('tm-cancelar').addEventListener('click', cerrarModalTerritorio);
+        adjuntarEliminarPendienteSiCorresponde();
+    }
+
+    async function abrirModalAgregados() {
+        tmAgregadosCache = null;
+        tmTitle.textContent = 'Agregar cierre manual';
+        tmSubtitle.textContent = 'Seleccioná territorio, fecha y responsable';
+        tmError.textContent = '';
+        tmBody.innerHTML = '<div style="padding:8px 0;color:#607d8b">Cargando datos…</div>';
+        territorioModal.classList.add('open');
+        territorioModal.setAttribute('aria-hidden', 'false');
+        try {
+            const data = await obtenerCatalogo();
+            const hoy = new Date().toISOString().slice(0, 10);
+            const campoTerr =
+                data.territorios.length > 0
+                    ? `<select id="tm-ag-territorio" class="tm-select">
+                            <option value="">Seleccionar…</option>
+                            ${data.territorios.map((n) => {
+                                const etq = etiquetaTerritorio(n);
+                                const label = esTerritorioPueblo(n) && etq !== String(n)
+                                    ? `${etq} (T-${n})`
+                                    : n;
+                                return `<option value="${escapeHtml(n)}">${escapeHtml(label)}</option>`;
+                            }).join('')}
+                        </select>`
+                    : `<input id="tm-ag-territorio" class="modal-input" type="text" inputmode="numeric" placeholder="Nº territorio" />`;
+            const campoRespAg =
+                data.responsables.length > 0
+                    ? `<select id="tm-ag-responsable" class="tm-select">
+                            <option value="">Seleccionar…</option>
+                            ${data.responsables.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('')}
+                        </select>`
+                    : `<input id="tm-ag-responsable" class="modal-input" type="text" placeholder="Responsable" />`;
+            tmBody.innerHTML = `
+                <div class="tm-grid">
+                    <div>
+                        <label class="tm-label" for="tm-ag-territorio">Territorio</label>
+                        ${campoTerr}
+                    </div>
+                    <div>
+                        <label class="tm-label" for="tm-ag-fecha">Fecha</label>
+                        <input id="tm-ag-fecha" class="tm-select" type="date" value="${hoy}">
+                    </div>
+                    <div class="full">
+                        <label class="tm-label" for="tm-ag-responsable">Responsable</label>
+                        ${campoRespAg}
+                    </div>
+                    <div class="full">
+                        <label class="tm-label" for="tm-ag-manzanas">Manzanas pendientes (solo incompleto)</label>
+                        <input id="tm-ag-manzanas" class="modal-input" type="text" placeholder="Ej: Faltan 3 manzanas que dan a..." />
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-blue" data-ag-accion="completado">Completado</button>
+                    <button class="modal-btn modal-btn-amber" data-ag-accion="incompleto">Incompleto</button>
+                    <button class="modal-btn modal-btn-green" data-ag-accion="completado-campana">Completado en Campaña</button>
+                    <button class="modal-btn modal-btn-gray" id="tm-ag-cancelar">Cancelar</button>
+                </div>`;
+            tmBody.querySelectorAll('[data-ag-accion]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    await ejecutarAccionAgregado(btn.getAttribute('data-ag-accion') || '');
+                });
+            });
+            document.getElementById('tm-ag-cancelar').addEventListener('click', cerrarModalTerritorio);
+        } catch (e) {
+            tmError.textContent = 'Error cargando datos: ' + e.message;
+        }
+    }
+
+    async function ejecutarAccionAgregado(accion) {
+        const numero = (document.getElementById('tm-ag-territorio')?.value || '').trim();
+        const fecha = (document.getElementById('tm-ag-fecha')?.value || '').trim();
+        const responsable = (document.getElementById('tm-ag-responsable')?.value || '').trim();
+        const manzanasPendientes = (document.getElementById('tm-ag-manzanas')?.value || '').trim();
+        if (!numero) { tmError.textContent = 'Seleccioná un territorio.'; return; }
+        if (!fecha) { tmError.textContent = 'Seleccioná una fecha.'; return; }
+        if (!responsable) { tmError.textContent = 'Seleccioná un responsable.'; return; }
+        if (accion === 'incompleto' && !manzanasPendientes) { tmError.textContent = 'Ingresá manzanas pendientes para incompleto.'; return; }
+        tmError.textContent = '';
+        try {
+            const rid = idSupabasePendienteParaNumero(numero);
+            const modo = await aplicarAccion(
+                'agregado-accion',
+                { numero, fecha, responsable, accion, manzanasPendientes },
+                { reemplazarSupabaseId: rid }
+            );
+            if (modo === 'api') {
+                cerrarModalTerritorio();
+                await recargarDatosPreferApi();
+            } else {
+                cerrarModalTerritorio();
+                renderDesdeSalidas();
+                hintText.innerHTML =
+                    'Accion guardada en <strong>Supabase</strong>. En la PC principal ejecutá <code>Sync-SupabaseToAccess.ps1</code> para pasarla a Access.';
+            }
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    function mostrarOpcionesHecho() {
+        limpiarMiniMapa();
+        tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
+        tmSubtitle.textContent = 'Elegí cómo cerrar el territorio';
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        const ban = htmlBannerPendienteTerritorio(territorioSeleccionado);
+        tmBody.innerHTML = ban + `
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-blue" id="tm-completado">Completado</button>
+                <button class="modal-btn modal-btn-amber" id="tm-incompleto">Incompleto</button>
+                <button class="modal-btn modal-btn-green" id="tm-campana">Completado en Campaña</button>
+                <button class="modal-btn modal-btn-gray" id="tm-volver">Volver</button>
+            </div>`;
+        document.getElementById('tm-completado').addEventListener('click', async () => {
+            await ejecutarAccionTerritorio('completado');
+        });
+        document.getElementById('tm-incompleto').addEventListener('click', pedirIncompleto);
+        document.getElementById('tm-campana').addEventListener('click', async () => {
+            await ejecutarAccionTerritorio('completado-campana');
+        });
+        document.getElementById('tm-volver').addEventListener('click', () => abrirModalTerritorio(territorioSeleccionado, null));
+        adjuntarEliminarPendienteSiCorresponde();
+    }
+
+    async function obtenerMetaMapa() {
+        if (tmMetaCache) return tmMetaCache;
+        const resp = await fetch('mapa_meta.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status + ' en mapa_meta.json');
+        tmMetaCache = await resp.json();
+        return tmMetaCache;
+    }
+
+    async function obtenerDatosTerritoriosMiniMapa() {
+        if (tmDatosCache) return tmDatosCache;
+        if (!esEntornoLocal()) {
+            tmDatosCache = {};
+            return tmDatosCache;
+        }
+        try {
+            const resp = await fetch('/api/territorios', { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const arr = await resp.json();
+            const dict = {};
+            for (const t of Array.isArray(arr) ? arr : []) {
+                const numero = String(t.numero ?? '').trim();
+                if (!numero) continue;
+                dict[numero] = {
+                    dias: Number.isFinite(Number(t.dias)) ? Number(t.dias) : null,
+                    abiertoCerrado: !!t.abiertoCerrado,
+                    rurales: !!t.rurales,
+                    manzanasPendientes: t.manzanasPendientes || '',
+                    campana: !!t.campana
+                };
+            }
+            tmDatosCache = dict;
+            return tmDatosCache;
+        } catch (_) {
+            tmDatosCache = {};
+            return tmDatosCache;
+        }
+    }
+
+    function leerLatLon(valor) {
+        if (!valor) return null;
+        if (Array.isArray(valor) && valor.length >= 2) {
+            const lat = Number(valor[0]),
+                lon = Number(valor[1]);
+            if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+        }
+        if (typeof valor === 'string') {
+            const p = valor.split(/[;,]/).map((x) => Number(String(x).trim().replace(',', '.')));
+            if (p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])) return { lat: p[0], lon: p[1] };
+        }
+        if (typeof valor === 'object') {
+            const lat = Number(valor.lat ?? valor.latitude ?? valor.Latitud);
+            const lon = Number(valor.lon ?? valor.lng ?? valor.long ?? valor.Longitud);
+            if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+        }
+        return null;
+    }
+
+    function extraerPuntosPolygon(pointsAttr) {
+        return String(pointsAttr || '')
+            .trim()
+            .split(/\s+/)
+            .map((par) => par.split(',').map(Number))
+            .filter((pt) => pt.length >= 2 && Number.isFinite(pt[0]) && Number.isFinite(pt[1]));
+    }
+
+    function centroPuntos(pts) {
+        if (!pts || !pts.length) return { x: 0, y: 0 };
+        return {
+            x: pts.reduce((acc, p) => acc + p[0], 0) / pts.length,
+            y: pts.reduce((acc, p) => acc + p[1], 0) / pts.length
+        };
+    }
+
+    function resolverSistema3x3(A, b) {
+        const m = [
+            [A[0][0], A[0][1], A[0][2], b[0]],
+            [A[1][0], A[1][1], A[1][2], b[1]],
+            [A[2][0], A[2][1], A[2][2], b[2]]
+        ];
+        for (let col = 0; col < 3; col++) {
+            let piv = col;
+            for (let row = col + 1; row < 3; row++) {
+                if (Math.abs(m[row][col]) > Math.abs(m[piv][col])) piv = row;
+            }
+            if (Math.abs(m[piv][col]) < 1e-12) return null;
+            if (piv !== col) [m[col], m[piv]] = [m[piv], m[col]];
+            const div = m[col][col];
+            for (let j = col; j < 4; j++) m[col][j] /= div;
+            for (let row = 0; row < 3; row++) {
+                if (row === col) continue;
+                const fac = m[row][col];
+                for (let j = col; j < 4; j++) m[row][j] -= fac * m[col][j];
+            }
+        }
+        return [m[0][3], m[1][3], m[2][3]];
+    }
+
+    function ajustarTransformacionAfin(controles) {
+        if (!controles || controles.length < 3) return null;
+        let sxx = 0,
+            sxy = 0,
+            sx = 0,
+            syy = 0,
+            sy = 0,
+            n = 0;
+        let blx = 0,
+            bly = 0,
+            bl1 = 0,
+            bax = 0,
+            bay = 0,
+            ba1 = 0;
+        for (const p of controles) {
+            const x = p.x,
+                y = p.y;
+            sxx += x * x;
+            sxy += x * y;
+            sx += x;
+            syy += y * y;
+            sy += y;
+            n += 1;
+            blx += x * p.lon;
+            bly += y * p.lon;
+            bl1 += p.lon;
+            bax += x * p.lat;
+            bay += y * p.lat;
+            ba1 += p.lat;
+        }
+        const A = [
+            [sxx, sxy, sx],
+            [sxy, syy, sy],
+            [sx, sy, n]
+        ];
+        const lonCoef = resolverSistema3x3(A, [blx, bly, bl1]);
+        const latCoef = resolverSistema3x3(A, [bax, bay, ba1]);
+        if (!lonCoef || !latCoef) return null;
+        return { lonCoef, latCoef };
+    }
+
+    function aplicarTransformacion(tr, x, y) {
+        return {
+            lon: tr.lonCoef[0] * x + tr.lonCoef[1] * y + tr.lonCoef[2],
+            lat: tr.latCoef[0] * x + tr.latCoef[1] * y + tr.latCoef[2]
+        };
+    }
+
+    const TM_LINEA_VIA_SVG = { x1: 28, y1: 392, x2: 1040, y2: 366 };
+    const TM_AJUSTE_STORAGE_KEY = 'territorios-ajuste-global-v1';
+    const TM_GOOGLE_TILE_SUBS = '0123';
+    const TM_OPACIDAD_SATELITAL = 0.25;
+    let tmAjusteGlobalCargado = null;
+    const TM_COLOR_INCOMPLETO = '#ff3a99';
+    const TM_COLOR_CAMPANA = '#ffff00';
+    const TM_COLOR_ASIGNADO = '#d32f2f';
+    const TM_COLOR_SIN_DATOS = '#eeeeee';
+    const TM_ESCALA = [
+        { min: -15, max: 27, color: '#F2F2F2' },
+        { min: 28, max: 55, color: '#E0F7FA' },
+        { min: 56, max: 62, color: '#4DD0E1' },
+        { min: 63, max: 69, color: '#2196F3' },
+        { min: 70, max: 76, color: '#0D47A1' },
+        { min: 77, max: 83, color: '#C6FF00' },
+        { min: 84, max: 90, color: '#2E7D32' },
+        { min: 91, max: 97, color: '#FFEB3B' },
+        { min: 98, max: 104, color: '#FF9800' },
+        { min: 105, max: 111, color: '#E65100' },
+        { min: 112, max: 118, color: '#6200EA' },
+        { min: 119, max: Infinity, color: '#000000' }
+    ];
+
+    function colorPorMoraMini(dias) {
+        if (dias == null || Number.isNaN(dias)) return TM_COLOR_SIN_DATOS;
+        for (const tramo of TM_ESCALA) {
+            if (dias >= tramo.min && dias <= tramo.max) return tramo.color;
+        }
+        return TM_ESCALA[TM_ESCALA.length - 1].color;
+    }
+
+    function estiloTerritorioMini(numero, selected, datos) {
+        const info = datos[String(numero)] || {};
+        const fillColor = colorPorMoraMini(info.dias);
+        const incompleto = !!(info.manzanasPendientes && String(info.manzanasPendientes).trim());
+        const asignado = !!info.abiertoCerrado;
+        const campana = !!info.campana;
+        const borderColor = incompleto ? TM_COLOR_INCOMPLETO : asignado ? TM_COLOR_ASIGNADO : campana ? TM_COLOR_CAMPANA : fillColor;
+        return {
+            style: {
+                color: borderColor,
+                opacity: selected ? 1 : 0.95,
+                weight: selected ? 4 : 2.6,
+                fillColor,
+                fillOpacity: selected ? 0.18 : 0.28,
+                lineJoin: 'round'
+            },
+            asignado,
+            rural: !!info.rurales
+        };
+    }
+
+    function asegurarDefsTramasMini(svg) {
+        if (!svg) return;
+        let defs = svg.querySelector('defs[data-tramas-mini="1"]');
+        if (defs) return;
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        defs.setAttribute('data-tramas-mini', '1');
+        const mkPattern = (id, color, strokeWidth) => {
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            p.setAttribute('id', id);
+            p.setAttribute('patternUnits', 'userSpaceOnUse');
+            p.setAttribute('width', '10');
+            p.setAttribute('height', '10');
+            p.setAttribute('patternTransform', 'rotate(45)');
+            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l.setAttribute('x1', '0');
+            l.setAttribute('y1', '0');
+            l.setAttribute('x2', '0');
+            l.setAttribute('y2', '10');
+            l.setAttribute('stroke', color);
+            l.setAttribute('stroke-opacity', '.72');
+            l.setAttribute('stroke-width', String(strokeWidth));
+            p.appendChild(l);
+            return p;
+        };
+        defs.appendChild(mkPattern('tm-trama-asignado', TM_COLOR_ASIGNADO, 3.8));
+        defs.appendChild(mkPattern('tm-trama-rural', '#111', 3.8));
+        svg.insertBefore(defs, svg.firstChild);
+    }
+
+    function aplicarTramaMini(path, patternId) {
+        if (!path) return;
+        const svg = path.ownerSVGElement;
+        if (!svg) return;
+        asegurarDefsTramasMini(svg);
+        path.setAttribute('fill', `url(#${patternId})`);
+        path.setAttribute('fill-opacity', '1');
+    }
+
+    function iconoEtiquetaMini(numero, selected) {
+        const html = `<span class="territorio-pill${selected ? ' sel' : ''}" style="background:#fff;color:#111;border-color:${selected ? '#1a73e8' : 'rgba(0,0,0,.24)'}">${String(numero)}</span>`;
+        return L.divIcon({
+            className: 'territorio-label',
+            html,
+            iconSize: selected ? [62, 28] : [46, 24],
+            iconAnchor: selected ? [31, 14] : [23, 12]
+        });
+    }
+
+    function yLineaViaEnSvg(x) {
+        const den = TM_LINEA_VIA_SVG.x2 - TM_LINEA_VIA_SVG.x1 || 1;
+        return TM_LINEA_VIA_SVG.y1 + ((TM_LINEA_VIA_SVG.y2 - TM_LINEA_VIA_SVG.y1) * (x - TM_LINEA_VIA_SVG.x1)) / den;
+    }
+
+    function grupoSegunViaSvg(x, y) {
+        return y <= yLineaViaEnSvg(x) ? 'arriba' : 'abajo';
+    }
+
+    function metrosPorGradoLon(lat) {
+        return Math.cos((lat * Math.PI) / 180) * 111320;
+    }
+
+    function geoALocal(lat, lon, ref) {
+        return { x: (lon - ref.lon) * metrosPorGradoLon(ref.lat), y: (lat - ref.lat) * 111320 };
+    }
+
+    function localAGeo(x, y, ref) {
+        return { lat: ref.lat + y / 111320, lon: ref.lon + x / metrosPorGradoLon(ref.lat) };
+    }
+
+    function boundsDesdePuntosLocal(localPts) {
+        if (!localPts.length) return null;
+        return {
+            minX: Math.min(...localPts.map((p) => p.x)),
+            maxX: Math.max(...localPts.map((p) => p.x)),
+            minY: Math.min(...localPts.map((p) => p.y)),
+            maxY: Math.max(...localPts.map((p) => p.y))
+        };
+    }
+
+    function cornersDesdeBounds(bounds) {
+        if (!bounds) return null;
+        return {
+            nw: { x: bounds.minX, y: bounds.maxY },
+            ne: { x: bounds.maxX, y: bounds.maxY },
+            se: { x: bounds.maxX, y: bounds.minY },
+            sw: { x: bounds.minX, y: bounds.minY }
+        };
+    }
+
+    function transformarLocalPorCorners(x, y, bounds, corners) {
+        if (!bounds || !corners) return { x, y };
+        const denX = bounds.maxX - bounds.minX || 1;
+        const denY = bounds.maxY - bounds.minY || 1;
+        const s = (x - bounds.minX) / denX;
+        const t = (y - bounds.minY) / denY;
+        return {
+            x: (1 - s) * (1 - t) * corners.sw.x + s * (1 - t) * corners.se.x + (1 - s) * t * corners.nw.x + s * t * corners.ne.x,
+            y: (1 - s) * (1 - t) * corners.sw.y + s * (1 - t) * corners.se.y + (1 - s) * t * corners.nw.y + s * t * corners.ne.y
+        };
+    }
+
+    function normalizarCorners(corners) {
+        if (!corners || typeof corners !== 'object') return null;
+        const out = {};
+        for (const k of ['nw', 'ne', 'se', 'sw']) {
+            const p = corners[k];
+            if (!p) return null;
+            const x = Number(p.x),
+                y = Number(p.y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+            out[k] = { x, y };
+        }
+        return out;
+    }
+
+    function normalizarAjustePortable(v) {
+        if (!v || typeof v !== 'object') return null;
+        const out = { groups: null, compat: null };
+        if (v.groups && typeof v.groups === 'object') {
+            const g = {};
+            if (v.groups.arriba) g.arriba = normalizarCorners(v.groups.arriba);
+            if (v.groups.abajo) g.abajo = normalizarCorners(v.groups.abajo);
+            if (Object.keys(g).length) out.groups = g;
+        }
+        if (!out.groups && v.corners) {
+            const c = normalizarCorners(v.corners);
+            if (c) out.compat = { mode: 'single-bilinear', corners: c };
+        }
+        if (!out.groups && !out.compat && ('dx' in v || 'rot' in v || 'scaleX' in v || 'scaleY' in v || 'scale' in v)) {
+            out.compat = v;
+        }
+        return out.groups || out.compat ? out : null;
+    }
+
+    function leerAjusteGruposGuardado() {
+        try {
+            const raw = localStorage.getItem(TM_AJUSTE_STORAGE_KEY);
+            if (!raw) return null;
+            return normalizarAjustePortable(JSON.parse(raw));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function cargarAjusteGlobalMiniMapa() {
+        if (tmAjusteGlobalCargado) return tmAjusteGlobalCargado;
+        let ajuste = leerAjusteGruposGuardado();
+        if (!ajuste || !ajuste.groups) {
+            try {
+                const r = await fetch('territorios_portable.json', { cache: 'no-store' });
+                if (r.ok) {
+                    const doc = await r.json();
+                    const desdeArchivo = normalizarAjustePortable(doc && doc.ajusteGlobal);
+                    if (desdeArchivo && desdeArchivo.groups) ajuste = desdeArchivo;
+                }
+            } catch (_) {}
+        }
+        if (esEntornoLocal()) {
+            try {
+                const r = await fetch('/api/portable-ui', { cache: 'no-store' });
+                if (r.ok) {
+                    const doc = await r.json();
+                    const desdeApi = normalizarAjustePortable(doc && doc.ajusteGlobal);
+                    if (desdeApi && desdeApi.groups) ajuste = desdeApi;
+                }
+            } catch (_) {}
+        }
+        tmAjusteGlobalCargado = ajuste || { groups: null, compat: null };
+        return tmAjusteGlobalCargado;
+    }
+
+    function tmApistyleGoogleSoloNombresCalles() {
+        return encodeURIComponent(
+            [
+                's.t:0|s.e:a|p.v:off',
+                's.t:2|s.e:a|p.v:off',
+                's.t:1|s.e:l|p.v:off',
+                's.t:3|s.e:g|p.v:off',
+                's.t:3|s.e:l|p.v:on',
+                's.t:49|s.e:l|p.v:on',
+                's.t:50|s.e:l|p.v:on',
+                's.t:51|s.e:l|p.v:on'
+            ].join(',')
+        );
+    }
+
+    function tmUrlTileGoogleSoloNombresCalles() {
+        return (
+            'https://mt{s}.google.com/vt/lyrs=m&hl=es&apistyle=' +
+            tmApistyleGoogleSoloNombresCalles() +
+            '&x={x}&y={y}&z={z}'
+        );
+    }
+
+    function agregarCapasSatelitalMiniMapa(mapa) {
+        if (!mapa.getPane('tmCallesPane')) {
+            const p = mapa.createPane('tmCallesPane');
+            if (p) {
+                p.style.zIndex = '550';
+                p.style.pointerEvents = 'none';
+            }
+        }
+        L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&hl=es&x={x}&y={y}&z={z}', {
+            subdomains: TM_GOOGLE_TILE_SUBS,
+            maxZoom: 21,
+            maxNativeZoom: 20,
+            detectRetina: true,
+            opacity: TM_OPACIDAD_SATELITAL
+        }).addTo(mapa);
+        L.tileLayer(tmUrlTileGoogleSoloNombresCalles(), {
+            subdomains: TM_GOOGLE_TILE_SUBS,
+            maxZoom: 21,
+            maxNativeZoom: 20,
+            detectRetina: true,
+            opacity: 1,
+            pane: 'tmCallesPane'
+        }).addTo(mapa);
+    }
+
+    function esperarLayoutMiniMapa() {
+        return new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
+    }
+
+    function transformarLocalCompat(x, y, compat, boundsBase) {
+        if (!compat) return { x, y };
+        if (compat.mode === 'single-bilinear' && compat.corners) return transformarLocalPorCorners(x, y, boundsBase, compat.corners);
+        const dx = Number.isFinite(Number(compat.dx)) ? Number(compat.dx) : 0;
+        const dy = Number.isFinite(Number(compat.dy)) ? Number(compat.dy) : 0;
+        const rot = Number.isFinite(Number(compat.rot)) ? Number(compat.rot) : 0;
+        const scaleCompat = Number.isFinite(Number(compat.scale)) ? Number(compat.scale) : 1;
+        const scaleX = Number.isFinite(Number(compat.scaleX)) ? Number(compat.scaleX) : scaleCompat;
+        const scaleY = Number.isFinite(Number(compat.scaleY)) ? Number(compat.scaleY) : scaleCompat;
+        const ang = (rot * Math.PI) / 180;
+        const cos = Math.cos(ang),
+            sin = Math.sin(ang);
+        const xs = scaleX * x,
+            ys = scaleY * y;
+        return { x: cos * xs - sin * ys + dx, y: sin * xs + cos * ys + dy };
+    }
+
+    async function obtenerTerritoriosMiniMapa() {
+        if (tmTerritoriosCache) return tmTerritoriosCache;
+        const ajustadoGuardado = await cargarAjusteGlobalMiniMapa();
+        const [meta, svgTxt] = await Promise.all([
+            obtenerMetaMapa(),
+            fetch('mapa.svg', { cache: 'no-store' }).then((r) => {
+                if (!r.ok) throw new Error('HTTP ' + r.status + ' en mapa.svg');
+                return r.text();
+            })
+        ]);
+        const gps = meta && meta.gps ? meta.gps : {};
+        const doc = new DOMParser().parseFromString(svgTxt, 'image/svg+xml');
+        const shapes = [];
+        doc.querySelectorAll('.territorio').forEach((shape) => {
+            const numero = String(shape.getAttribute('data-n') || '').trim();
+            if (!numero || numero === '500') return;
+            const tag = String(shape.tagName || '').toLowerCase();
+            let pts = [];
+            if (tag === 'polygon') {
+                pts = extraerPuntosPolygon(shape.getAttribute('points'));
+            } else if (tag === 'rect') {
+                const x = Number(shape.getAttribute('x'));
+                const y = Number(shape.getAttribute('y'));
+                const w = Number(shape.getAttribute('width'));
+                const h = Number(shape.getAttribute('height'));
+                if ([x, y, w, h].every(Number.isFinite)) pts = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+            }
+            if (pts.length < 3) return;
+            shapes.push({ numero, tag, pts, centro: centroPuntos(pts) });
+        });
+        const controlesRect = shapes
+            .filter((s) => s.tag === 'rect' && Number(s.numero) < 200)
+            .map((s) => {
+                const p = leerLatLon(gps[s.numero]);
+                return p ? { x: s.centro.x, y: s.centro.y, lat: p.lat, lon: p.lon } : null;
+            })
+            .filter(Boolean);
+        const controlesTodos = shapes
+            .filter((s) => Number(s.numero) < 200)
+            .map((s) => {
+                const p = leerLatLon(gps[s.numero]);
+                return p ? { x: s.centro.x, y: s.centro.y, lat: p.lat, lon: p.lon } : null;
+            })
+            .filter(Boolean);
+        const controles = controlesRect.length >= 8 ? controlesRect : controlesTodos;
+        const tr = ajustarTransformacionAfin(controles);
+        if (!tr) throw new Error('No se pudo calibrar mapa de territorios.');
+        const territoriosBase = shapes.map((s) => {
+            const latlngsBase = s.pts.map(([x, y]) => aplicarTransformacion(tr, x, y)).map((p) => [p.lat, p.lon]);
+            const centroBase = aplicarTransformacion(tr, s.centro.x, s.centro.y);
+            return {
+                numero: s.numero,
+                groupKey: grupoSegunViaSvg(s.centro.x, s.centro.y),
+                latlngsBase,
+                centroBase
+            };
+        });
+        const todos = territoriosBase.flatMap((t) => t.latlngsBase);
+        const avg = todos.reduce((acc, p) => ({ lat: acc.lat + p[0], lon: acc.lon + p[1] }), { lat: 0, lon: 0 });
+        const centroRef = { lat: avg.lat / Math.max(1, todos.length), lon: avg.lon / Math.max(1, todos.length) };
+        const boundsPorGrupo = {};
+        for (const g of ['arriba', 'abajo']) {
+            const ptsGrupo = territoriosBase
+                .filter((t) => t.groupKey === g)
+                .flatMap((t) => t.latlngsBase)
+                .map((p) => geoALocal(p[0], p[1], centroRef));
+            boundsPorGrupo[g] = boundsDesdePuntosLocal(ptsGrupo);
+        }
+        const baseCornersPorGrupo = {
+            arriba: cornersDesdeBounds(boundsPorGrupo.arriba),
+            abajo: cornersDesdeBounds(boundsPorGrupo.abajo)
+        };
+        let cornersPorGrupo = { ...baseCornersPorGrupo };
+        if (ajustadoGuardado && ajustadoGuardado.groups) {
+            cornersPorGrupo = {
+                arriba: ajustadoGuardado.groups.arriba || baseCornersPorGrupo.arriba,
+                abajo: ajustadoGuardado.groups.abajo || baseCornersPorGrupo.abajo
+            };
+        } else if (ajustadoGuardado && ajustadoGuardado.compat) {
+            const todosLocal = territoriosBase.flatMap((t) => t.latlngsBase).map((p) => geoALocal(p[0], p[1], centroRef));
+            const boundsBase = boundsDesdePuntosLocal(todosLocal);
+            const aplicarCompatGrupo = (corners) => {
+                if (!corners) return null;
+                const out = {};
+                for (const k of ['nw', 'ne', 'se', 'sw']) {
+                    out[k] = transformarLocalCompat(corners[k].x, corners[k].y, ajustadoGuardado.compat, boundsBase);
+                }
+                return out;
+            };
+            cornersPorGrupo = {
+                arriba: aplicarCompatGrupo(baseCornersPorGrupo.arriba),
+                abajo: aplicarCompatGrupo(baseCornersPorGrupo.abajo)
+            };
+        }
+        tmTerritoriosCache = territoriosBase.map((t) => {
+            const bounds = boundsPorGrupo[t.groupKey];
+            const corners = cornersPorGrupo[t.groupKey];
+            const latlngs = t.latlngsBase.map((p) => {
+                const loc = geoALocal(p[0], p[1], centroRef);
+                const adj = transformarLocalPorCorners(loc.x, loc.y, bounds, corners);
+                const geo = localAGeo(adj.x, adj.y, centroRef);
+                return [geo.lat, geo.lon];
+            });
+            const cLoc = geoALocal(t.centroBase.lat, t.centroBase.lon, centroRef);
+            const cAdj = transformarLocalPorCorners(cLoc.x, cLoc.y, bounds, corners);
+            const cGeo = localAGeo(cAdj.x, cAdj.y, centroRef);
+            return { numero: t.numero, latlngs, centroGeo: cGeo };
+        });
+        return tmTerritoriosCache;
+    }
+
+    async function renderMiniMapaIncompleto(numero) {
+        const el = document.getElementById('tm-mini-mapa');
+        if (!el || typeof L === 'undefined') return;
+        try {
+            await esperarLayoutMiniMapa();
+            const [territorios, datos] = await Promise.all([obtenerTerritoriosMiniMapa(), obtenerDatosTerritoriosMiniMapa()]);
+            const keySel = String(numero).trim();
+            if (!tmMiniMapa) {
+                tmMiniMapa = L.map(el, {
+                    zoomControl: true,
+                    attributionControl: false,
+                    scrollWheelZoom: true,
+                    preferCanvas: false
+                });
+                agregarCapasSatelitalMiniMapa(tmMiniMapa);
+            }
+            tmMiniMapa.invalidateSize(true);
+            if (tmMiniMapaLayer) tmMiniMapa.removeLayer(tmMiniMapaLayer);
+            tmMiniMapaLayer = L.layerGroup().addTo(tmMiniMapa);
+            let polySel = null;
+            const polys = [];
+            for (const t of territorios) {
+                const esSel = String(t.numero) === keySel;
+                const est = estiloTerritorioMini(t.numero, esSel, datos);
+                const poly = L.polygon(t.latlngs, est.style).addTo(tmMiniMapaLayer);
+                if (est.asignado || est.rural) {
+                    const overlay = L.polygon(t.latlngs, {
+                        color: 'transparent',
+                        weight: 0,
+                        fillColor: '#fff',
+                        fillOpacity: 1,
+                        interactive: false
+                    }).addTo(tmMiniMapaLayer);
+                    const aplicar = () => {
+                        if (!overlay || !overlay._path) return;
+                        if (est.asignado) aplicarTramaMini(overlay._path, 'tm-trama-asignado');
+                        else aplicarTramaMini(overlay._path, 'tm-trama-rural');
+                    };
+                    overlay.on('add', aplicar);
+                    setTimeout(aplicar, 0);
+                }
+                L.marker([t.centroGeo.lat, t.centroGeo.lon], {
+                    icon: iconoEtiquetaMini(t.numero, esSel),
+                    interactive: false,
+                    keyboard: false
+                }).addTo(tmMiniMapaLayer);
+                polys.push(poly);
+                if (esSel) polySel = poly;
+            }
+            tmMiniMapa.invalidateSize(true);
+            if (polySel && polySel.getBounds && polySel.getBounds().isValid()) {
+                tmMiniMapa.fitBounds(polySel.getBounds(), { padding: [18, 18], maxZoom: 18 });
+            } else {
+                const b = L.featureGroup(polys).getBounds();
+                if (b && b.isValid()) tmMiniMapa.fitBounds(b, { padding: [18, 18], maxZoom: 16 });
+            }
+            requestAnimationFrame(() => {
+                if (tmMiniMapa) tmMiniMapa.invalidateSize(true);
+            });
+        } catch (e) {
+            limpiarMiniMapa();
+            el.innerHTML =
+                '<div style="padding:10px;color:#b00020;font-size:12px;line-height:1.35;">No se pudo cargar el mapa. Subí <code>mapa.svg</code> y <code>mapa_meta.json</code> junto a esta página en Netlify (o abrí desde el servidor local).</div>';
+        }
+    }
+
+    function pedirIncompleto() {
+        tmTerritoriosCache = null;
+        tmAjusteGlobalCargado = null;
+        limpiarMiniMapa();
+        tmSubtitle.textContent = 'Incompleto: manzanas pendientes';
+        tmError.textContent = '';
+        const ban = htmlBannerPendienteTerritorio(territorioSeleccionado);
+        tmBody.innerHTML = ban + `
+            <div class="tm-mapa-wrap">
+                <div class="tm-mapa-title">Mapa (satélite + calles) y territorios</div>
+                <div id="tm-mini-mapa"></div>
+            </div>
+            <input id="tm-manzanas" class="modal-input" type="text" placeholder="Ej: Faltan 3 manzanas que dan a..." />
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-amber" id="tm-confirmar-incompleto">Confirmar Incompleto</button>
+                <button class="modal-btn modal-btn-gray" id="tm-volver-hecho">Volver</button>
+            </div>`;
+        renderMiniMapaIncompleto(territorioSeleccionado);
+        document.getElementById('tm-confirmar-incompleto').addEventListener('click', async () => {
+            const txt = (document.getElementById('tm-manzanas').value || '').trim();
+            if (!txt) {
+                tmError.textContent = 'Ingresá el texto de Manzanas Pendientes.';
+                return;
+            }
+            await ejecutarAccionTerritorio('incompleto', txt);
+        });
+        document.getElementById('tm-volver-hecho').addEventListener('click', mostrarOpcionesHecho);
+        adjuntarEliminarPendienteSiCorresponde();
+    }
+
+    async function ejecutarAccionTerritorio(tipo, manzanasPendientes = '') {
+        tmError.textContent = '';
+        if (document.getElementById('tm-edit-fecha')) {
+            tmAjusteSalida = leerTmAjusteSalidaDesdeInputs();
+        }
+        const ajustePayload = construirPayloadAjusteSalida();
+        const rid = idSupabasePendienteParaNumero(territorioSeleccionado);
+        try {
+            let modo;
+            if (tipo === 'sin-hacer') {
+                modo = await aplicarAccion(
+                    'cerrar-sin-hecho',
+                    { numero: territorioSeleccionado, ...ajustePayload },
+                    { reemplazarSupabaseId: rid }
+                );
+            } else {
+                modo = await aplicarAccion(
+                    'cerrar-con-accion',
+                    {
+                        numero: territorioSeleccionado,
+                        accion: tipo,
+                        manzanasPendientes: manzanasPendientes || '',
+                        ...ajustePayload
+                    },
+                    { reemplazarSupabaseId: rid }
+                );
+            }
+            cerrarModalTerritorio();
+            if (modo === 'api') {
+                await recargarDatosPreferApi();
+            } else {
+                renderDesdeSalidas();
+                hintText.innerHTML =
+                    'Sin servidor local: acción guardada en <strong>Supabase</strong>. El territorio se muestra como informado hasta que se publique de nuevo en <code>datos_semana</code> o ejecutés <code>Sync-SupabaseToAccess.ps1</code>.';
+            }
+        } catch (err) {
+            tmError.textContent = 'Error: ' + err.message;
+        }
+    }
+
+    function cerrarModalTerritorio() {
+        limpiarMiniMapa();
+        territorioModal.classList.remove('open');
+        territorioModal.setAttribute('aria-hidden', 'true');
+        tmBody.innerHTML = '';
+        tmError.textContent = '';
+        tmError.classList.remove('modal-msg-ok');
+        tmSalidaCtxPersisted = null;
+        tmAjusteSalida = null;
+    }
+
+    async function recargarDatosPreferApi() {
+        if (!esEntornoLocal()) {
+            await cargarDesdeSupabase(false);
+            return;
+        }
+        if (await apiFunciona()) {
+            const r = await fetch('/api/salidas', { cache: 'no-store' });
+            if (r.ok) {
+                salidasRows = await r.json();
+                sembrarDescripcionesDesdeSalidas(salidasRows);
+                await refrescarPendientesSiSupabase();
+                renderDesdeSalidas();
+                hintText.innerHTML = 'Datos desde <code>/api/salidas</code> (servidor local).';
+                return;
+            }
+        }
+        await cargarDesdeSupabase(false);
+    }
+
+    async function cargarDesdeSupabase(showLoading) {
+        if (!window.TerritoriosSupabase || typeof window.TerritoriosSupabase.cargarDatosSemana !== 'function') {
+            throw new Error('Modulo Supabase no cargado.');
+        }
+        if (showLoading !== false) {
+            hintText.innerHTML = 'Cargando desde <code>Supabase</code>...';
+            root.innerHTML = '<div class="empty">Cargando...</div>';
+        }
+        const json = await window.TerritoriosSupabase.cargarDatosSemana();
+        const bundle = normalizarBundle(json);
+        salidasRows = Array.isArray(bundle.salidas) ? bundle.salidas.slice() : [];
+        catalogoResponsables = bundle.responsables || [];
+        catalogoTerritorios = bundle.territorios || [];
+        catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO, bundle.descripciones || {});
+        sembrarDescripcionesDesdeSalidas(salidasRows);
+        tmAgregadosCache = null;
+        await refrescarPendientesSiSupabase();
+        if (!salidasRows.length && filasSalidasParaVista().length === 0) {
+            mostrarEstadoSinDatosSupabase();
+            return;
+        }
+        renderDesdeSalidas();
+        hintText.innerHTML = 'Vista desde <code>Supabase/datos_semana</code> (' + salidasRows.length + ' filas). Access sigue siendo la fuente principal.';
+    }
+
+    async function cargar() {
+        try {
+            await recargarDatosPreferApi();
+        } catch (e) {
+            if (esErrorSupabaseDatos(e)) {
+                mostrarErrorSupabase(e);
+                return;
+            }
+            headerText.textContent = 'Salidas de predicación';
+            root.innerHTML =
+                '<div class="error-msg">No se pudieron cargar los datos. Verificá la conexión y la configuración de Supabase.</div>';
+            hintText.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
+        }
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', cargar);
+    document.getElementById('btn-agregados').addEventListener('click', abrirModalAgregados);
+    territorioModal.addEventListener('click', (ev) => {
+        if (ev.target === territorioModal) cerrarModalTerritorio();
+    });
+
+    window.addEventListener('load', cargar);
+</script>
+</body>
+</html>

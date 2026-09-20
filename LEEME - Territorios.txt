@@ -1,0 +1,50 @@
+﻿PROGRAMA TERRITORIOS - GUIA RAPIDA
+=================================
+Esta carpeta (App Territorios) ES el programa completo.
+Puede copiarse entera a otra PC, unidad o ruta; no depende de archivos
+fuera de esta carpeta. Ver PORTABILIDAD.md.
+
+ABRIR
+-----
+Doble click en: Abrir Territorios.cmd
+
+CERRAR
+------
+Opcion 1 (recomendada): boton "Salir" dentro del mapa.
+Opcion 2: doble click en Cerrar Territorios.cmd
+
+ARCHIVOS NECESARIOS (misma carpeta)
+-----------------------------------
+- mapa.html
+- mapa.svg
+- mapa_meta.json
+- Territorios_BaseDeDatos.accdb
+- servir.ps1
+- PathManager.ps1
+- abrir_mapa.vbs
+- Abrir Territorios.cmd
+- Cerrar Territorios.cmd
+
+SUBCARPETAS (se crean solas al iniciar)
+--------------------------------------
+- data\     — opcional: puede contener Territorios_BaseDeDatos.accdb
+- config\   — configuracion futura
+- logs\     — registros del servidor
+- exports\  — PDF y exportaciones
+- assets\   — imagenes y recursos exportados
+
+DATOS EN LA MISMA CARPETA (portable / OneDrive)
+------------------------------------------------
+- territorios_portable.json — referencias del mapa satelital y calibracion del mapa.
+  Se crea o actualiza solo al usar mapa.html o predicacion.html con el servidor local.
+  Si esta carpeta esta en OneDrive, ese archivo viaja con el resto del programa.
+
+GITHUB PAGES
+------------
+La pagina publica tambien puede publicarse en GitHub Pages, con datos en
+Google Sheets. Ver GITHUB_PAGES.md (carpeta docs/, Enviar a Google en mapa.html).
+
+-----
+- Si el navegador muestra "ERR_CONNECTION_REFUSED", abrir de nuevo "Abrir Territorios.cmd".
+- Puerto local usado: 8080.
+- Para que referencias y calibracion se guarden en territorios_portable.json, abrir siempre con "Abrir Territorios.cmd" (http://localhost:8080/...). Si abris mapa.html como archivo suelto (file://), el navegador no puede escribir en la carpeta y se usara solo almacenamiento local del perfil.
