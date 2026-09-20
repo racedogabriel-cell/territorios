@@ -18,10 +18,6 @@ function Read-Utf8([string]$path) {
 $pred = Read-Utf8 (Join-Path $root 'Netlify\predicacion-netlify.html')
 $mapa = Read-Utf8 (Join-Path $root 'Netlify\mapa-semanal.html')
 
-$pred = $pred.Replace(
-    '<button type="button" class="btn btn-secondary" id="btn-agregados">Agregados</button>',
-    '<button type="button" class="btn btn-secondary" id="btn-agregados">Agregados</button>' + "`r`n            <a class=`"btn btn-secondary`" href=`"mapa-semanal.html`" style=`"display:inline-flex;align-items:center;text-decoration:none;`">Mapa semanal</a>"
-)
 $mapa = $mapa.Replace(
     '<h1>Mapa semanal de territorios</h1>',
     '<h1>Mapa semanal de territorios</h1>' + "`r`n  <a href=`"./`" class=`"btn-top`" style=`"text-decoration:none`">Salidas</a>"
