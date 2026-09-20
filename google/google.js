@@ -310,9 +310,40 @@
         return out;
     }
 
+    let pendientesCache = null;
+
+    function guardarPendientesCache(rows) {
+        pendientesCache = Array.isArray(rows) ? rows : [];
+        return pendientesCache;
+    }
+
+    function invalidarPendientesCache() {
+        pendientesCache = null;
+    }
+
     async function cargarDatosSemana() {
         assertAlgunaConfig();
         if (puedeAppsScript()) {
+            try {
+                const pagina = await callAppsScript('cargarPagina', null, 'GET');
+                if (pagina && typeof pagina === 'object' && pagina.bundle) {
+                    guardarPendientesCache(pagina.pendientes);
+                    return pagina.bundle;
+                }
+                if (pagina && typeof pagina === 'object' && Array.isArray(pagina.salidas)) {
+                    return pagina;
+                }
+            } catch (errPagina) {
+                const msgPagina = String(errPagina && errPagina.message ? errPagina.message : errPagina);
+                if (!/no reconocida/i.test(msgPagina) && !puedeSheetsApi()) {
+                    try {
+                        const data = await callAppsScript('cargarDatosSemana', null, 'GET');
+                        if (data) return data;
+                    } catch (errClasico) {
+                        throw errPagina;
+                    }
+                }
+            }
             try {
                 const data = await callAppsScript('cargarDatosSemana', null, 'GET');
                 if (data) return data;
@@ -332,6 +363,7 @@
     }
 
     async function guardarAccion(tipo, payload) {
+        invalidarPendientesCache();
         const row = await callAppsScript('guardarAccion', {
             tipo: tipo,
             payload: normalizarPayloadAccion(payload)
@@ -340,19 +372,21 @@
     }
 
     async function listarAccionesPendientes() {
+        if (pendientesCache) return pendientesCache;
         assertAlgunaConfig();
         if (puedeAppsScript()) {
             try {
                 const rows = await callAppsScript('listarAccionesPendientes', null, 'GET');
-                return Array.isArray(rows) ? rows : [];
+                return guardarPendientesCache(Array.isArray(rows) ? rows : []);
             } catch (err) {
                 if (!puedeSheetsApi()) throw err;
             }
         }
-        return listarAccionesDesdeSheets();
+        return guardarPendientesCache(await listarAccionesDesdeSheets());
     }
 
     async function actualizarAccion(id, tipo, payload) {
+        invalidarPendientesCache();
         return callAppsScript('actualizarAccion', {
             id: id,
             tipo: tipo,
@@ -361,16 +395,19 @@
     }
 
     async function eliminarAccion(id) {
+        invalidarPendientesCache();
         return callAppsScript('eliminarAccion', { id: id }, 'POST');
     }
 
     async function eliminarAccionesPendientesPorNumero(numero) {
         const num = String(numero || '').trim();
         if (!num) throw new Error('Número de territorio inválido.');
+        invalidarPendientesCache();
         return callAppsScript('eliminarAccionesPendientesPorNumero', { numero: num }, 'POST');
     }
 
     async function marcarAccionProcesada(id) {
+        invalidarPendientesCache();
         return callAppsScript('marcarAccionProcesada', { id: id }, 'POST');
     }
 
@@ -378,6 +415,7 @@
         if (!bundle || typeof bundle !== 'object') {
             throw new Error('upsertDatosSemana: bundle inválido.');
         }
+        invalidarPendientesCache();
         return callAppsScript('upsertDatosSemana', { bundle: bundle }, 'POST');
     }
 

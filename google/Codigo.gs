@@ -16,6 +16,29 @@ var SHEET_MAPA = 'mapa_territorios';
 var SHEET_ACCIONES = 'acciones';
 var CANAL_PUBLICA = 'publica';
 var ORIGEN_WEB = 'predicacion-github';
+var CACHE_BUNDLE = 'bundle_publica';
+
+function bustCache_() {
+  try { CacheService.getScriptCache().remove(CACHE_BUNDLE); }
+  catch (err) {}
+}
+
+function leerCacheBundle_() {
+  try {
+    var raw = CacheService.getScriptCache().get(CACHE_BUNDLE);
+    if (raw) return JSON.parse(raw);
+  } catch (err) {}
+  return null;
+}
+
+function guardarCacheBundle_(bundle) {
+  try {
+    var raw = JSON.stringify(bundle);
+    if (raw && raw.length < 90000) {
+      CacheService.getScriptCache().put(CACHE_BUNDLE, raw, 180);
+    }
+  } catch (err) {}
+}
 
 function jsonOutput_(obj) {
   return ContentService
@@ -122,6 +145,14 @@ function cell_(row, idx, names, def) {
 }
 
 function cargarBundle_() {
+  var cached = leerCacheBundle_();
+  if (cached) return cached;
+  var bundle = cargarBundleDesdeHojas_();
+  guardarCacheBundle_(bundle);
+  return bundle;
+}
+
+function cargarBundleDesdeHojas_() {
   var datosSh = sheet_(SHEET_DATOS);
   var tabla = leerTabla_(datosSh);
   var idx = idxHeader_(tabla.header);
@@ -206,6 +237,7 @@ function clearKeepHeader_(sh) {
 }
 
 function upsertDatosSemana_(bundle) {
+  bustCache_();
   inicializar();
   var exportado = bundle.exportado || new Date().toISOString();
   var version = bundle.version || 2;
@@ -330,6 +362,7 @@ function findAccionRow_(id) {
 }
 
 function guardarAccion_(tipo, payload) {
+  bustCache_();
   var sh = sheet_(SHEET_ACCIONES);
   var id = nextAccionId_(sh);
   var ahora = new Date().toISOString();
@@ -338,6 +371,7 @@ function guardarAccion_(tipo, payload) {
 }
 
 function actualizarAccion_(id, tipo, payload) {
+  bustCache_();
   var found = findAccionRow_(id);
   if (!found.row) throw new Error('No se encontró la acción id=' + id);
   found.sh.getRange(found.row, 2, 1, 2).setValues([[tipo, stringify_(payload || {})]]);
@@ -345,6 +379,7 @@ function actualizarAccion_(id, tipo, payload) {
 }
 
 function eliminarAccion_(id) {
+  bustCache_();
   var found = findAccionRow_(id);
   if (!found.row) throw new Error('No se eliminó ninguna fila (id=' + id + ').');
   var proc = String(found.sh.getRange(found.row, 5).getValue()).toLowerCase();
@@ -374,6 +409,7 @@ function eliminarPorNumero_(numero) {
 }
 
 function marcarProcesada_(id) {
+  bustCache_();
   var found = findAccionRow_(id);
   if (!found.row) throw new Error('No se encontró la acción id=' + id);
   found.sh.getRange(found.row, 5).setValue(true);
@@ -384,6 +420,7 @@ function marcarProcesada_(id) {
 function dispatch_(body) {
   var action = String((body && body.action) || '').trim();
   if (action === 'cargarDatosSemana') return ok_(cargarBundle_());
+  if (action === 'cargarPagina') return ok_({ bundle: cargarBundle_(), pendientes: listarPendientes_() });
   if (action === 'listarAccionesPendientes') return ok_(listarPendientes_());
   if (action === 'upsertDatosSemana') return ok_(upsertDatosSemana_(body.bundle || {}));
   if (action === 'guardarAccion') return ok_(guardarAccion_(body.tipo, body.payload));
@@ -400,9 +437,8 @@ function dispatch_(body) {
 
 function doGet(e) {
   try {
-    inicializar();
     var body = (e && e.parameter) ? e.parameter : {};
-    if (!body.action) body.action = 'cargarDatosSemana';
+    if (!body.action) body.action = 'cargarPagina';
     if (body.payload && typeof body.payload === 'string') {
       body.payload = parseJson_(body.payload, body.payload);
     }
@@ -414,7 +450,6 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    inicializar();
     return dispatch_(parseBody_(e));
   } catch (err) {
     return fail_(err.message || err);
