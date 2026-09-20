@@ -32,21 +32,45 @@
         .title-block {
             background: var(--primary);
             color: #fff;
-            border-radius: 10px;
-            padding: 10px 12px;
+            border-radius: 12px;
+            padding: 12px 14px 11px;
             border-bottom: 3px solid var(--accent);
             box-shadow: 0 2px 10px rgba(0,0,0,.1);
         }
-        .title-block h1 { font-size: 0.82rem; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; line-height: 1.2; }
-        .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .title-block h1 {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.92rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            line-height: 1.25;
+        }
         .btn {
             border: none; border-radius: 8px; padding: 9px 10px; font-size: 12px; font-weight: 800;
             cursor: pointer; min-height: 40px; touch-action: manipulation;
         }
-        .btn-primary { background: #1565c0; color: #fff; flex: 1; min-width: 100px; }
+        .btn-agregados {
+            flex-shrink: 0;
+            background: var(--accent);
+            color: #1a1408;
+            padding: 8px 12px;
+            min-height: 36px;
+            font-size: 12px;
+        }
         .btn-secondary { background: #eceff1; color: #263238; }
-        .hint { font-size: 10px; color: rgba(255,255,255,.72); margin-top: 6px; line-height: 1.3; }
-        .hint code { font-size: 9px; background: rgba(0,0,0,.2); padding: 1px 4px; border-radius: 3px; }
+        .hint {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,.78);
+            line-height: 1.35;
+        }
         .day-section { margin-bottom: 10px; }
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 2px 0 4px; }
         .day-pill { flex-shrink: 0; padding: 3px 8px; border-radius: 6px; background: var(--primary-bg); color: var(--primary); font-weight: 900; font-size: 11px; letter-spacing: .02em; }
@@ -194,12 +218,11 @@
 
 <div class="top-bar">
     <div class="title-block">
-        <h1 id="header-text">Salidas de predicación</h1>
-        <div class="actions">
-            <button type="button" class="btn btn-primary" id="btn-refresh">Actualizar</button>
-            <button type="button" class="btn btn-secondary" id="btn-agregados">Agregados</button>
+        <div class="title-row">
+            <h1 id="header-text">Salidas de predicación</h1>
+            <button type="button" class="btn btn-agregados" id="btn-agregados">Agregados</button>
         </div>
-        <p class="hint" id="hint-text">Cargando desde <code>Google Sheets</code>…</p>
+        <p class="hint" id="hint-text">Las operaciones pueden tardar unos momentos.</p>
     </div>
 </div>
 
@@ -217,9 +240,14 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="./google.js"></script>
 <script>
+    const HINT_LATENCIA = 'Las operaciones pueden tardar unos momentos.';
     const root = document.getElementById('root');
     const headerText = document.getElementById('header-text');
     const hintText = document.getElementById('hint-text');
+
+    function setHintLatencia() {
+        if (hintText) hintText.textContent = HINT_LATENCIA;
+    }
     const territorioModal = document.getElementById('territorio-modal');
     const tmTitle = document.getElementById('tm-title');
     const tmSubtitle = document.getElementById('tm-subtitle');
@@ -723,10 +751,9 @@
             'La tabla <code>datos_semana</code> está vacía o el JSON no trae filas en <code>salidas</code>.<br><br>' +
             '1. Configurá la hoja y Apps Script (ver <code>GITHUB_PAGES.md</code>)<br>' +
             '2. Desde <code>mapa.html</code> (PC) usá <strong>Enviar a Google</strong>.<br>' +
-            '3. Pulsá <strong>Actualizar</strong> en esta página.' +
+            '3. Recargá esta página.' +
             '</div>';
-        hintText.innerHTML =
-            'Publicá datos en <code>datos_semana</code> desde la PC (mapa: <strong>Enviar a Google</strong>) y pulsá <strong>Actualizar</strong>.';
+        setHintLatencia();
     }
 
     function mostrarErrorNube(err) {
@@ -734,8 +761,7 @@
         const msg = escapeHtml(String(err && err.message ? err.message : err));
         root.innerHTML =
             '<div class="error-msg">' + msg + '</div>';
-        hintText.innerHTML =
-            'Revisá <code>google/google.js</code> (APPS_SCRIPT_URL o SPREADSHEET_ID + API_KEY). Ver <code>GITHUB_PAGES.md</code>.';
+        setHintLatencia();
     }
 
     function ordenarSalidasRows() {
@@ -1131,8 +1157,7 @@
             } else {
                 cerrarModalTerritorio();
                 renderDesdeSalidas();
-                hintText.innerHTML =
-                    'Accion guardada en <strong>Google Sheets</strong>. En la PC principal ejecutá <code>Sync-GoogleToAccess.ps1</code> para pasarla a Access.';
+                setHintLatencia();
             }
         } catch (err) {
             tmError.textContent = 'Error: ' + err.message;
@@ -1843,8 +1868,7 @@
                 await recargarDatosPreferApi();
             } else {
                 renderDesdeSalidas();
-                hintText.innerHTML =
-                    'Sin servidor local: acción guardada en <strong>Google Sheets</strong>. El territorio se muestra como informado hasta que se publique de nuevo en <code>datos_semana</code> o ejecutés <code>Sync-GoogleToAccess.ps1</code>.';
+                setHintLatencia();
             }
         } catch (err) {
             tmError.textContent = 'Error: ' + err.message;
@@ -1874,7 +1898,7 @@
                 sembrarDescripcionesDesdeSalidas(salidasRows);
                 await refrescarPendientesNube();
                 renderDesdeSalidas();
-                hintText.innerHTML = 'Datos desde <code>/api/salidas</code> (servidor local).';
+                setHintLatencia();
                 return;
             }
         }
@@ -1886,7 +1910,7 @@
             throw new Error('Modulo Google no cargado.');
         }
         if (showLoading !== false) {
-            hintText.innerHTML = 'Cargando desde <code>Google Sheets</code>...';
+            setHintLatencia();
             root.innerHTML = '<div class="empty">Cargando...</div>';
         }
         const json = await window.TerritoriosGoogle.cargarDatosSemana();
@@ -1903,7 +1927,7 @@
             return;
         }
         renderDesdeSalidas();
-        hintText.innerHTML = 'Vista desde <code>Google Sheets/datos_semana</code> (' + salidasRows.length + ' filas). Access sigue siendo la fuente principal.';
+        setHintLatencia();
     }
 
     async function cargar() {
@@ -1916,12 +1940,11 @@
             }
             headerText.textContent = 'Salidas de predicación';
             root.innerHTML =
-                '<div class="error-msg">No se pudieron cargar los datos. Verificá la conexión y la configuración de Google Sheets.</div>';
-            hintText.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
+                '<div class="error-msg">No se pudieron cargar los datos. Verificá la conexión y recargá la página.</div>';
+            setHintLatencia();
         }
     }
 
-    document.getElementById('btn-refresh').addEventListener('click', cargar);
     document.getElementById('btn-agregados').addEventListener('click', abrirModalAgregados);
     territorioModal.addEventListener('click', (ev) => {
         if (ev.target === territorioModal) cerrarModalTerritorio();
