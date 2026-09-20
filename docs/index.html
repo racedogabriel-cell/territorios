@@ -426,7 +426,7 @@
 
     async function eliminarPendienteTerritorioActual() {
         const nube = window.TerritoriosGoogle;
-        if (!supa) {
+        if (!nube) {
             throw new Error('Módulo Google no cargado.');
         }
         const num = String(territorioSeleccionado || '').trim();
@@ -790,7 +790,7 @@
             return 'api';
         }
         const nube = window.TerritoriosGoogle;
-        if (!supa || typeof nube.guardarAccion !== 'function') {
+        if (!nube || typeof nube.guardarAccion !== 'function') {
             throw new Error('Sin servidor local (/api) ni módulo Google para guardar la acción.');
         }
         if (reemplazarId != null && typeof nube.actualizarAccion === 'function') {
