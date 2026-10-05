@@ -63,6 +63,7 @@
         memoria.forEach(function (r) {
             if (r.estado !== 'enviando') return;
             r.estado = r.modo === 'eliminar' ? 'eliminar' : 'pendiente';
+            r.intento = 0;
             cambio = true;
         });
         if (cambio) {
@@ -180,12 +181,18 @@
         const payload = clonar(item.payload);
         const serverId = item.serverId;
         const numero = item.numero;
-        const eraEliminar = item.estado === 'eliminar';
-        item.estado = 'enviando';
-        item.error = '';
+        const eraEliminar = item.estado === 'eliminar' || item.modo === 'eliminar';
+        const esReintento = (item.intento || 0) > 0;
+        item.intento = (item.intento || 0) + 1;
         item.actualizado_en = new Date().toISOString();
-        await guardarReg(item);
-        emitir();
+        if (!esReintento) {
+            item.estado = 'enviando';
+            item.error = '';
+            await guardarReg(item);
+            emitir();
+        } else {
+            await guardarReg(item);
+        }
         try {
             let row = null;
             if (eraEliminar) {
@@ -228,8 +235,16 @@
         } catch (err) {
             const now = await obtener(localId);
             if (!now || now.revision !== rev) return;
-            now.estado = eraEliminar ? 'eliminar' : 'error';
-            now.error = String(err && err.message ? err.message : err);
+            const msg = String(err && err.message ? err.message : err);
+            const yaNoEsta = /No se encontró la acción|No se eliminó ninguna|ya procesada/i.test(msg);
+            if (eraEliminar && yaNoEsta) {
+                await quitar(localId);
+                emitir();
+                return;
+            }
+            if (yaNoEsta) now.serverId = null;
+            now.estado = eraEliminar ? 'eliminar' : (yaNoEsta ? 'pendiente' : 'error');
+            now.error = msg;
             now.reintentarEn = Date.now() + ESPERA_ERROR_MS;
             now.actualizado_en = new Date().toISOString();
             await guardarReg(now);
