@@ -78,20 +78,6 @@
             line-height: 1.35;
         }
         .hint.sync-error { color: #ffcdd2; }
-        .install-btn {
-            display: inline-flex;
-            align-items: center;
-            margin-top: 8px;
-            background: transparent;
-            color: #fff;
-            border: 1px solid rgba(255,255,255,.5);
-            border-radius: 8px;
-            padding: 6px 10px;
-            font-weight: 800;
-            font-size: 12px;
-            min-height: 32px;
-            cursor: pointer;
-        }
         .day-section { margin-bottom: 10px; }
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 2px 0 4px; }
         .day-pill { flex-shrink: 0; padding: 3px 8px; border-radius: 6px; background: var(--primary-bg); color: var(--primary); font-weight: 900; font-size: 11px; letter-spacing: .02em; }
@@ -243,8 +229,7 @@
             <h1 id="header-text">Salidas de predicación</h1>
             <button type="button" class="btn btn-agregados" id="btn-agregados">Agregados</button>
         </div>
-        <p class="hint" id="hint-text">Los cambios se guardan en el teléfono y se envían a Google en segundo plano.</p>
-        <button type="button" class="install-btn" id="btn-instalar" hidden>Instalar aplicación</button>
+        <p class="hint" id="hint-text" hidden></p>
     </div>
 </div>
 
@@ -263,7 +248,6 @@
 <script src="./google.js"></script>
 <script src="./cola-local.js"></script>
 <script>
-    const HINT_LISTO = 'Los cambios se guardan en el teléfono y se envían a Google en segundo plano.';
     const root = document.getElementById('root');
     const headerText = document.getElementById('header-text');
     const hintText = document.getElementById('hint-text');
@@ -273,16 +257,19 @@
         const resumen = window.ColaLocal && typeof ColaLocal.resumen === 'function' ? ColaLocal.resumen() : null;
         hintText.classList.toggle('sync-error', !!(resumen && resumen.error));
         if (resumen && resumen.error) {
+            hintText.hidden = false;
             hintText.textContent = 'Guardado en el teléfono. Google no confirmó; se reintenta solo.';
             return;
         }
         if (resumen && resumen.pendientes > 0) {
+            hintText.hidden = false;
             hintText.textContent = resumen.pendientes === 1
                 ? 'Guardado en el teléfono. Enviando a Google…'
                 : ('Guardado en el teléfono. Enviando ' + resumen.pendientes + ' cambios a Google…');
             return;
         }
-        hintText.textContent = HINT_LISTO;
+        hintText.textContent = '';
+        hintText.hidden = true;
     }
     const territorioModal = document.getElementById('territorio-modal');
     const tmTitle = document.getElementById('tm-title');
@@ -2096,44 +2083,10 @@
     }
 
     function prepararInstalacion() {
-        const btn = document.getElementById('btn-instalar');
-        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-        let diferido = null;
-        window.addEventListener('beforeinstallprompt', function (ev) {
-            ev.preventDefault();
-            diferido = ev;
-            if (btn) {
-                btn.hidden = false;
-                btn.textContent = 'Instalar aplicación';
-            }
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function (err) {
+            console.warn('No se pudo registrar la aplicación instalable:', err);
         });
-        if (btn) {
-            btn.addEventListener('click', async function () {
-                if (diferido) {
-                    diferido.prompt();
-                    try { await diferido.userChoice; } catch (_) {}
-                    diferido = null;
-                    btn.hidden = true;
-                    return;
-                }
-                if (ios && !standalone) {
-                    alert('En iPhone: tocá Compartir y después Agregar a inicio.');
-                }
-            });
-        }
-        if (ios && !standalone && btn) {
-            btn.hidden = false;
-            btn.textContent = 'Cómo instalar';
-        }
-        window.addEventListener('appinstalled', function () {
-            if (btn) btn.hidden = true;
-        });
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function (err) {
-                console.warn('No se pudo registrar la aplicación instalable:', err);
-            });
-        }
     }
 
     async function cargar() {
