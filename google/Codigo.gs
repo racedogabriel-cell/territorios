@@ -308,7 +308,35 @@ function upsertDatosSemana_(bundle) {
     }
     mapaSh.getRange(2, 1, mOut.length, 2).setValues(mOut);
   }
-  return { ok: true, salidas: salidas.length, territoriosMapa: nums.length };
+  return { ok: true, salidas: salidas.length, territoriosMapa: nums.length, accionesCerradas: marcarAnterioresAlEnvio_(exportado) };
+}
+
+function marcarAnterioresAlEnvio_(corteIso) {
+  var corte = new Date(corteIso);
+  if (isNaN(corte.getTime())) return 0;
+  var sh = sheet_(SHEET_ACCIONES);
+  var tabla = leerTabla_(sh);
+  var idx = idxHeader_(tabla.header);
+  if (idx.procesado == null || idx.creado_en == null) return 0;
+  var colProc = idx.procesado + 1;
+  var colCuando = idx.procesado_en != null ? idx.procesado_en + 1 : 0;
+  var ahora = new Date().toISOString();
+  var n = 0;
+  for (var i = 0; i < tabla.rows.length; i++) {
+    var r = tabla.rows[i];
+    var proc = String(cell_(r, idx, ['procesado'], 'false')).toLowerCase();
+    if (proc === 'true' || proc === '1' || proc === 'verdadero') continue;
+    if (!cell_(r, idx, ['id'], '')) continue;
+    var creado = r[idx.creado_en];
+    var t = creado instanceof Date ? creado : new Date(String(creado || ''));
+    if (isNaN(t.getTime()) || t.getTime() > corte.getTime()) continue;
+    var fila = i + 2;
+    sh.getRange(fila, colProc).setValue(true);
+    if (colCuando) sh.getRange(fila, colCuando).setValue(ahora);
+    n++;
+  }
+  if (n) bustCache_();
+  return n;
 }
 
 function listarPendientes_() {

@@ -375,6 +375,15 @@
     }
 
     let fusionGen = 0;
+    let fechaExportadoSemana = '';
+
+    function accionAnteriorAlEnvio(creadoEn) {
+        if (!fechaExportadoSemana) return false;
+        const corte = new Date(fechaExportadoSemana).getTime();
+        const t = creadoEn ? new Date(creadoEn).getTime() : 0;
+        if (!corte || isNaN(corte) || !t || isNaN(t)) return false;
+        return t <= corte;
+    }
 
     async function fusionarPendientes(rowsServidor) {
         const gen = ++fusionGen;
@@ -382,6 +391,7 @@
         const rows = Array.isArray(rowsServidor) ? rowsServidor : [];
         for (const row of rows) {
             if (!row || !tipoPendienteAfectaVista(row.tipo)) continue;
+            if (accionAnteriorAlEnvio(row.creado_en)) continue;
             const num = numeroDeFilaPendiente(row);
             if (!num) continue;
             const prev = desdeNube.get(num);
@@ -396,6 +406,7 @@
         for (const reg of locales) {
             const num = String(reg.numero || '').trim();
             if (!num) continue;
+            if (accionAnteriorAlEnvio(reg.creado_en)) continue;
             if (reg.estado === 'eliminar') {
                 ocultar.add(num);
                 continue;
@@ -474,6 +485,9 @@
             if (window.ColaLocal && typeof ColaLocal.reconciliar === 'function') {
                 await ColaLocal.reconciliar(ultimasPendientesServidor);
             }
+        }
+        if (fechaExportadoSemana && window.ColaLocal && typeof ColaLocal.descartarAnteriores === 'function') {
+            await ColaLocal.descartarAnteriores(fechaExportadoSemana);
         }
         await fusionarPendientes(ultimasPendientesServidor);
         if (window.ColaLocal && typeof ColaLocal.drenar === 'function') ColaLocal.drenar();
@@ -665,7 +679,8 @@
                 salidas: json.salidas,
                 responsables: Array.isArray(json.responsables) ? json.responsables : [],
                 territorios: Array.isArray(json.territorios) ? json.territorios : [],
-                descripciones
+                descripciones,
+                exportado: json.exportado || ''
             };
         }
         throw new Error('Formato inválido: se esperaba un array o un objeto con "salidas".');
@@ -2041,6 +2056,7 @@
         catalogoResponsables = bundle.responsables || [];
         catalogoTerritorios = bundle.territorios || [];
         catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO, bundle.descripciones || {});
+        fechaExportadoSemana = bundle.exportado ? String(bundle.exportado) : '';
         sembrarDescripcionesDesdeSalidas(salidasRows);
         tmAgregadosCache = null;
     }
@@ -2053,7 +2069,8 @@
                     salidas: salidasRows,
                     responsables: catalogoResponsables,
                     territorios: catalogoTerritorios,
-                    descripciones: catalogoDescripciones
+                    descripciones: catalogoDescripciones,
+                    exportado: fechaExportadoSemana
                 },
                 pendientes: ultimasPendientesServidor
             });

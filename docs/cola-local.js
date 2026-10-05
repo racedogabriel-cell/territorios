@@ -421,6 +421,23 @@
         if (cambio) emitir();
     }
 
+    async function descartarAnteriores(corteIso) {
+        const corte = new Date(corteIso).getTime();
+        if (!corte || isNaN(corte)) return;
+        await hidratar();
+        const copia = memoria.slice();
+        let cambio = false;
+        for (let i = 0; i < copia.length; i++) {
+            const reg = copia[i];
+            if (!reg || reg.estado === 'enviando') continue;
+            const t = reg.creado_en ? new Date(reg.creado_en).getTime() : 0;
+            if (!t || isNaN(t) || t > corte) continue;
+            await quitar(reg.localId);
+            cambio = true;
+        }
+        if (cambio) emitir();
+    }
+
     function onCambio(fn) { if (typeof fn === 'function') oyentes.push(fn); }
     function onResultado(fn) { if (typeof fn === 'function') resultados.push(fn); }
 
@@ -437,6 +454,7 @@
         encolar: encolar,
         encolarEliminacion: encolarEliminacion,
         reconciliar: reconciliar,
+        descartarAnteriores: descartarAnteriores,
         drenar: drenar,
         arrancar: arrancar,
         onCambio: onCambio,

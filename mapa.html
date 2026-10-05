@@ -1415,7 +1415,13 @@ async function recibirDatosSemanaDesdeGoogle(){
     if(typeof api.listarAccionesPendientes==='function'){
       if(el)el.textContent='Buscando acciones pendientes (colaboradores)...';
       const pend=await api.listarAccionesPendientes();
-      const lista=Array.isArray(pend)?pend:[];
+      const corte=bundle&&bundle.exportado?new Date(bundle.exportado).getTime():0;
+      const lista=(Array.isArray(pend)?pend:[]).filter((row)=>{
+        if(!corte||Number.isNaN(corte))return true;
+        const t=row&&row.creado_en?new Date(row.creado_en).getTime():0;
+        if(!t||Number.isNaN(t))return true;
+        return t>corte;
+      });
       if(lista.length>0){
         if(el)el.textContent='Aplicando '+lista.length+' acción(es) en Access...';
         const accionesPayload=lista.map((row)=>({tipo:String(row.tipo||''),payload:row.payload}));

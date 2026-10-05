@@ -70,6 +70,23 @@ if ($accionesDb.Count -gt $Limit) {
     $accionesDb = $accionesDb[0..($Limit - 1)]
 }
 
+$bundleRaw = Invoke-GoogleApi -Action 'cargarDatosSemana' -Method GET
+$bundle = Unwrap-GoogleData $bundleRaw
+$corte = $null
+if ($bundle -and $bundle.exportado) {
+    try { $corte = [datetime]::Parse([string]$bundle.exportado).ToUniversalTime() } catch { $corte = $null }
+}
+if ($corte) {
+    $accionesDb = @(
+        $accionesDb | Where-Object {
+            $creado = $null
+            try { $creado = [datetime]::Parse([string]$_.creado_en).ToUniversalTime() } catch { $creado = $null }
+            if (-not $creado) { return $true }
+            return $creado -gt $corte
+        }
+    )
+}
+
 if ($accionesDb.Count -eq 0) {
     Write-Host 'No hay acciones pendientes.'
     return
