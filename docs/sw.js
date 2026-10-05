@@ -1,6 +1,6 @@
 /* Service worker solo para la página de salidas.
    mapa-semanal.html no se cachea: sus pedidos salen directo a la red. */
-const CACHE = 'salidas-shell-v5';
+const CACHE = 'salidas-shell-v6';
 const ASSETS = [
     './',
     './index.html',

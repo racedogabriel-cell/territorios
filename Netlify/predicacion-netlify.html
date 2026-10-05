@@ -374,7 +374,10 @@
         };
     }
 
+    let fusionGen = 0;
+
     async function fusionarPendientes(rowsServidor) {
+        const gen = ++fusionGen;
         const desdeNube = new Map();
         const rows = Array.isArray(rowsServidor) ? rowsServidor : [];
         for (const row of rows) {
@@ -387,6 +390,7 @@
             if (!prev || tNew >= tPrev) desdeNube.set(num, row);
         }
         const locales = window.ColaLocal ? await ColaLocal.listar() : [];
+        if (gen !== fusionGen) return;
         const ocultar = new Set();
         const overlay = new Map();
         for (const reg of locales) {
@@ -465,8 +469,14 @@
                 console.warn('No se pudieron cargar acciones pendientes en Google Sheets:', err);
             }
         }
-        if (llego) ultimasPendientesServidor = mezclarConfirmadosConLectura(rows, inicio);
+        if (llego) {
+            ultimasPendientesServidor = mezclarConfirmadosConLectura(rows, inicio);
+            if (window.ColaLocal && typeof ColaLocal.reconciliar === 'function') {
+                await ColaLocal.reconciliar(ultimasPendientesServidor);
+            }
+        }
         await fusionarPendientes(ultimasPendientesServidor);
+        if (window.ColaLocal && typeof ColaLocal.drenar === 'function') ColaLocal.drenar();
     }
 
     function filasSalidasParaVista() {
@@ -538,9 +548,11 @@
             }
             out._pendienteTitulo = tituloPend;
             if (ent.row && ent.row._local) {
-                out._pendienteTitulo = ent.row._estado === 'error'
-                    ? 'No se pudo enviar a Google. Se reintenta solo.'
-                    : 'Enviando a Google…';
+                if (ent.row._estado === 'error') {
+                    out._pendienteTitulo = 'No se pudo enviar a Google. Se reintenta solo.';
+                } else if (ent.row._estado === 'enviando') {
+                    out._pendienteTitulo = 'Enviando a Google…';
+                }
             }
             out._pendienteSync = true;
             out._accionBorde = claseBordeAccionPendiente(tipo, pay);
@@ -562,9 +574,11 @@
         const local = ent.row && ent.row._local;
         const estadoLocal = ent.row && ent.row._estado;
         if (local && estadoLocal === 'error') {
-            cabezas.push('Está en este teléfono. Google no confirmó el envío y se reintenta solo.');
+            cabezas.push('No se pudo enviar a Google. Se reintenta solo.');
+        } else if (local && estadoLocal === 'enviando') {
+            cabezas.push('Enviando a Google…');
         } else if (local) {
-            cabezas.push('Guardado en este teléfono. Se envía a Google en segundo plano.');
+            cabezas.push('Guardado en este teléfono. Sale hacia Google enseguida.');
         } else {
             cabezas.push(
                 'Estado en <strong>Google Sheets</strong> (aún no aplicado en Access). Podés modificar la acción o eliminarla antes de ejecutar <code>Sync-GoogleToAccess.ps1</code>.'
@@ -2153,6 +2167,7 @@
         try {
             await recargarDatosPreferApi();
         } catch (e) {
+            if (window.ColaLocal && typeof ColaLocal.drenar === 'function') ColaLocal.drenar();
             if (conSnapshot) {
                 setHintLatencia();
                 return;

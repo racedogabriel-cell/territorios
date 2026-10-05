@@ -143,14 +143,16 @@
     }
 
     function resumen() {
-        const activos = memoria.filter(function (r) {
-            return r.estado === 'pendiente' || r.estado === 'enviando' || r.estado === 'error' || r.estado === 'eliminar';
+        const enviando = memoria.filter(function (r) { return r.estado === 'enviando'; }).length;
+        const esperando = memoria.some(function (r) {
+            return r.estado === 'pendiente' || r.estado === 'eliminar';
         });
-        const conError = activos.some(function (r) { return r.estado === 'error'; });
-        const enCurso = activos.some(function (r) {
-            return r.estado === 'pendiente' || r.estado === 'enviando' || r.estado === 'eliminar';
-        });
-        return { pendientes: activos.length, error: conError && !enCurso, enCurso: enCurso };
+        const conError = memoria.some(function (r) { return r.estado === 'error'; });
+        return {
+            pendientes: enviando,
+            enCurso: enviando > 0,
+            error: conError && enviando === 0 && !esperando
+        };
     }
 
     function programar(ms) {
@@ -164,9 +166,8 @@
     function elegir() {
         const ahora = Date.now();
         return memoria.find(function (r) {
-            if (r.estado === 'pendiente' || r.estado === 'eliminar') return true;
-            if (r.estado === 'error' && (!r.reintentarEn || r.reintentarEn <= ahora)) return true;
-            return false;
+            if (r.reintentarEn && r.reintentarEn > ahora) return false;
+            return r.estado === 'pendiente' || r.estado === 'eliminar' || r.estado === 'error';
         }) || null;
     }
 
@@ -349,19 +350,69 @@
         }
     }
 
+    function firmaAccion(tipo, payload) {
+        const p = payload && typeof payload === 'object' ? payload : {};
+        const limpio = {};
+        Object.keys(p).sort().forEach(function (k) {
+            const v = p[k];
+            if (v == null) return;
+            if (typeof v === 'string' && v.trim() === '') return;
+            limpio[k] = typeof v === 'string' ? v.trim() : v;
+        });
+        return String(tipo || '') + '\n' + JSON.stringify(limpio);
+    }
+
+    function numeroDeFilaServidor(row) {
+        return String((row && row.payload && row.payload.numero) || '').trim();
+    }
+
+    async function reconciliar(filas) {
+        await hidratar();
+        const lista = Array.isArray(filas) ? filas : [];
+        const copia = memoria.slice();
+        let cambio = false;
+        for (let i = 0; i < copia.length; i++) {
+            const reg = copia[i];
+            if (!reg || reg.estado === 'enviando') continue;
+            const num = String(reg.numero || '').trim();
+            const delNum = lista.filter(function (row) { return numeroDeFilaServidor(row) === num; });
+            const esBorrado = reg.estado === 'eliminar' || reg.modo === 'eliminar';
+            if (esBorrado) {
+                if (!delNum.length) {
+                    await quitar(reg.localId);
+                    cambio = true;
+                }
+                continue;
+            }
+            const firmaLocal = firmaAccion(reg.tipo, reg.payload);
+            const yaEsta = delNum.some(function (row) {
+                return firmaAccion(row.tipo, row.payload) === firmaLocal;
+            });
+            if (yaEsta) {
+                await quitar(reg.localId);
+                cambio = true;
+                continue;
+            }
+            const sigueEnGoogle = reg.serverId != null && delNum.some(function (row) {
+                return String(row.id) === String(reg.serverId);
+            });
+            if (reg.serverId != null && !sigueEnGoogle) {
+                reg.serverId = null;
+                if (reg.estado === 'error') reg.estado = 'pendiente';
+                await guardarReg(reg);
+                cambio = true;
+            }
+        }
+        if (cambio) emitir();
+    }
+
     function onCambio(fn) { if (typeof fn === 'function') oyentes.push(fn); }
     function onResultado(fn) { if (typeof fn === 'function') resultados.push(fn); }
 
     function arrancar(api) {
         apiRef = api;
-        hidratar().then(function () {
-            emitir();
-            return drenar(api);
-        }).catch(function () {});
+        hidratar().then(function () { emitir(); }).catch(function () {});
         window.addEventListener('online', function () { drenar(apiRef); });
-        document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible') drenar(apiRef);
-        });
     }
 
     window.ColaLocal = {
@@ -370,6 +421,7 @@
         resumen: resumen,
         encolar: encolar,
         encolarEliminacion: encolarEliminacion,
+        reconciliar: reconciliar,
         drenar: drenar,
         arrancar: arrancar,
         onCambio: onCambio,
