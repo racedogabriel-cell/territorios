@@ -339,6 +339,12 @@ function marcarAnterioresAlEnvio_(corteIso) {
   return n;
 }
 
+function esProcesado_(val) {
+  if (val === true) return true;
+  var proc = String(val == null ? '' : val).trim().toLowerCase();
+  return proc === 'true' || proc === '1' || proc === 'verdadero' || proc === 'si' || proc === 'sí';
+}
+
 function listarPendientes_() {
   var sh = sheet_(SHEET_ACCIONES);
   var tabla = leerTabla_(sh);
@@ -346,8 +352,7 @@ function listarPendientes_() {
   var out = [];
   for (var i = 0; i < tabla.rows.length; i++) {
     var r = tabla.rows[i];
-    var proc = String(cell_(r, idx, ['procesado'], 'false')).toLowerCase();
-    if (proc === 'true' || proc === '1' || proc === 'verdadero') continue;
+    if (esProcesado_(cell_(r, idx, ['procesado'], 'false')) || esProcesado_(r[4])) continue;
     if (!cell_(r, idx, ['id', 'tipo'], '')) continue;
     out.push({
       id: cell_(r, idx, ['id'], i + 2),

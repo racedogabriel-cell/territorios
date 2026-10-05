@@ -431,7 +431,7 @@
             const reg = copia[i];
             if (!reg || reg.estado === 'enviando') continue;
             const t = reg.creado_en ? new Date(reg.creado_en).getTime() : 0;
-            if (!t || isNaN(t) || t > corte) continue;
+            if (t && !isNaN(t) && t > corte) continue;
             await quitar(reg.localId);
             cambio = true;
         }

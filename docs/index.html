@@ -489,6 +489,11 @@
         if (fechaExportadoSemana && window.ColaLocal && typeof ColaLocal.descartarAnteriores === 'function') {
             await ColaLocal.descartarAnteriores(fechaExportadoSemana);
         }
+        if (fechaExportadoSemana) {
+            ultimasPendientesServidor = ultimasPendientesServidor.filter(function (row) {
+                return row && !accionAnteriorAlEnvio(row.creado_en);
+            });
+        }
         await fusionarPendientes(ultimasPendientesServidor);
         if (window.ColaLocal && typeof ColaLocal.drenar === 'function') ColaLocal.drenar();
     }

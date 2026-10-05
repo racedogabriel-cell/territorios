@@ -1493,6 +1493,24 @@ function exportarSnapshotMapaSemanal(){
     territorios
   };
 }
+async function resetearAccionesAnteriores(corteIso){
+  const api=window.TerritoriosGoogle;
+  if(!api||typeof api.listarAccionesPendientes!=='function'||typeof api.marcarAccionProcesada!=='function')return 0;
+  const pend=await api.listarAccionesPendientes();
+  const lista=Array.isArray(pend)?pend:[];
+  const corte=corteIso?new Date(corteIso).getTime():0;
+  let n=0;
+  for(const row of lista){
+    if(!row||row.id==null||row.id==='')continue;
+    const t=row.creado_en?new Date(row.creado_en).getTime():0;
+    if(corte&&!Number.isNaN(corte)&&t&&!Number.isNaN(t)&&t>corte)continue;
+    try{
+      await api.marcarAccionProcesada(row.id);
+      n++;
+    }catch(_){}
+  }
+  return n;
+}
 async function sincronizarGoogleDesdeMapa(){
   const btn=document.getElementById('btnSyncGoogle');
   const el=document.getElementById('syncGoogleMsg');
@@ -1506,7 +1524,11 @@ async function sincronizarGoogleDesdeMapa(){
     const bundle=await armarBundleDatosSemanaMapa();
     bundle.mapaSemanal=exportarSnapshotMapaSemanal();
     await window.TerritoriosGoogle.upsertDatosSemana(bundle);
-    if(el){el.textContent='Enviado a Google Sheets (salidas + mapa semanal)';el.style.color='#137333'}
+    const cerradas=await resetearAccionesAnteriores(bundle.exportado);
+    if(el){
+      el.textContent='Enviado a Google Sheets. '+cerradas+' acción(es) anterior(es) cerrada(s)';
+      el.style.color='#137333';
+    }
   }catch(err){
     console.warn(err);
     if(el){el.textContent='Error al enviar';el.style.color='#c62828'}
