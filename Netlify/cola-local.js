@@ -147,7 +147,10 @@
             return r.estado === 'pendiente' || r.estado === 'enviando' || r.estado === 'error' || r.estado === 'eliminar';
         });
         const conError = activos.some(function (r) { return r.estado === 'error'; });
-        return { pendientes: activos.length, error: conError };
+        const enCurso = activos.some(function (r) {
+            return r.estado === 'pendiente' || r.estado === 'enviando' || r.estado === 'eliminar';
+        });
+        return { pendientes: activos.length, error: conError && !enCurso, enCurso: enCurso };
     }
 
     function programar(ms) {

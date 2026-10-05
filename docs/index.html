@@ -258,14 +258,15 @@
         hintText.classList.toggle('sync-error', !!(resumen && resumen.error));
         if (resumen && resumen.error) {
             hintText.hidden = false;
-            hintText.textContent = 'Guardado en el teléfono. Google no confirmó; se reintenta solo.';
+            hintText.textContent = 'Google no confirmó el envío. Se reintenta solo.';
             return;
         }
-        if (resumen && resumen.pendientes > 0) {
+        if (resumen && (resumen.enCurso || (resumen.pendientes > 0 && !resumen.error))) {
             hintText.hidden = false;
-            hintText.textContent = resumen.pendientes === 1
-                ? 'Guardado en el teléfono. Enviando a Google…'
-                : ('Guardado en el teléfono. Enviando ' + resumen.pendientes + ' cambios a Google…');
+            const n = resumen.pendientes || 1;
+            hintText.textContent = n === 1
+                ? 'Enviando a Google…'
+                : ('Enviando ' + n + ' cambios a Google…');
             return;
         }
         hintText.textContent = '';
@@ -309,6 +310,9 @@
     let pendientesNubePorNumero = new Map();
     let ultimasPendientesServidor = [];
     let vistaLista = false;
+    /** Confirmaciones de este teléfono que una lectura anterior no debe borrar. */
+    let confirmadosEnVuelo = new Map();
+    let refrescandoVista = false;
 
     const TIPOS_PENDIENTE_VISTA = new Set([
         'cerrar-sin-hecho',
@@ -420,15 +424,48 @@
         return a || 'Acción';
     }
 
+    function mezclarConfirmadosConLectura(rows, inicio) {
+        const out = Array.isArray(rows) ? rows.slice() : [];
+        for (const [num, info] of confirmadosEnVuelo) {
+            if (!info || !info.row) {
+                confirmadosEnVuelo.delete(num);
+                continue;
+            }
+            const esta = out.some(function (row) {
+                return numeroDeFilaPendiente(row) === num && String(row.id) === String(info.row.id);
+            });
+            if (esta) {
+                confirmadosEnVuelo.delete(num);
+                continue;
+            }
+            if (info.en >= inicio) {
+                for (let i = out.length - 1; i >= 0; i--) {
+                    if (numeroDeFilaPendiente(out[i]) === num) out.splice(i, 1);
+                }
+                out.push(info.row);
+            } else {
+                confirmadosEnVuelo.delete(num);
+            }
+        }
+        return out;
+    }
+
     async function refrescarPendientesNube() {
+        const inicio = Date.now();
+        let rows = ultimasPendientesServidor.slice();
+        let llego = false;
         if (window.TerritoriosGoogle && typeof window.TerritoriosGoogle.listarAccionesPendientes === 'function') {
             try {
-                const rows = await window.TerritoriosGoogle.listarAccionesPendientes();
-                if (Array.isArray(rows)) ultimasPendientesServidor = rows;
+                const recibidas = await window.TerritoriosGoogle.listarAccionesPendientes();
+                if (Array.isArray(recibidas)) {
+                    rows = recibidas;
+                    llego = true;
+                }
             } catch (err) {
                 console.warn('No se pudieron cargar acciones pendientes en Google Sheets:', err);
             }
         }
+        if (llego) ultimasPendientesServidor = mezclarConfirmadosConLectura(rows, inicio);
         await fusionarPendientes(ultimasPendientesServidor);
     }
 
@@ -500,6 +537,11 @@
                 tituloPend = 'Agregado manual: ' + etiquetaAccionCierre(pay.accion) + ' — pendiente';
             }
             out._pendienteTitulo = tituloPend;
+            if (ent.row && ent.row._local) {
+                out._pendienteTitulo = ent.row._estado === 'error'
+                    ? 'No se pudo enviar a Google. Se reintenta solo.'
+                    : 'Enviando a Google…';
+            }
             out._pendienteSync = true;
             out._accionBorde = claseBordeAccionPendiente(tipo, pay);
             return out;
@@ -714,7 +756,8 @@
         const eh = horaLocalDesdeDate(it.d);
         const labelTxt = etiquetaTerritorio(it.t, it.desc);
         const label = escapeHtml(labelTxt);
-        const attrs = `class="${cls}" data-territorio="${escapeHtml(it.t)}" data-descripcion="${escapeHtml(it.desc || labelTxt)}" data-env-fecha="${ef}" data-env-hora="${eh}" data-responsable="${escapeHtml(it.r)}"`;
+        const tituloAttr = it._pendienteTitulo ? ` title="${escapeHtml(it._pendienteTitulo)}"` : '';
+        const attrs = `class="${cls}"${tituloAttr} data-territorio="${escapeHtml(it.t)}" data-descripcion="${escapeHtml(it.desc || labelTxt)}" data-env-fecha="${ef}" data-env-hora="${eh}" data-responsable="${escapeHtml(it.r)}"`;
         return '<span ' + attrs + '>' + label + '</span>';
     }
 
@@ -2071,7 +2114,12 @@
             ultimasPendientesServidor = ultimasPendientesServidor.filter(function (row) {
                 return numeroDeFilaPendiente(row) !== ev.numero;
             });
-            if (ev.tipo === 'confirmado' && ev.row) ultimasPendientesServidor.push(ev.row);
+            if (ev.tipo === 'confirmado' && ev.row) {
+                ultimasPendientesServidor.push(ev.row);
+                confirmadosEnVuelo.set(ev.numero, { row: ev.row, en: Date.now() });
+            } else if (ev.tipo === 'eliminado') {
+                confirmadosEnVuelo.delete(ev.numero);
+            }
         });
         ColaLocal.onCambio(function () {
             fusionarPendientes(ultimasPendientesServidor).then(function () {
@@ -2080,6 +2128,14 @@
             }).catch(function () {});
         });
         ColaLocal.arrancar(adaptadorGoogle());
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible' || refrescandoVista) return;
+            if (!window.TerritoriosGoogle) return;
+            refrescandoVista = true;
+            cargarDesdeGoogle(false).catch(function () {}).finally(function () {
+                refrescandoVista = false;
+            });
+        });
     }
 
     function prepararInstalacion() {
