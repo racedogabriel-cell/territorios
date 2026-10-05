@@ -29,6 +29,9 @@ Copy-Item -Force (Join-Path $root 'Netlify\mapa.svg') (Join-Path $docs 'mapa.svg
 Copy-Item -Force (Join-Path $root 'Netlify\mapa_meta.json') (Join-Path $docs 'mapa_meta.json')
 Copy-Item -Force (Join-Path $root 'google\google.js') (Join-Path $docs 'google.js')
 Copy-Item -Force (Join-Path $root 'google\google.js') (Join-Path $root 'Netlify\google.js')
+foreach ($nombre in @('cola-local.js', 'sw.js', 'manifest.json', 'icon-192.png', 'icon-512.png')) {
+    Copy-Item -Force (Join-Path $root "Netlify\$nombre") (Join-Path $docs $nombre)
+}
 Write-Utf8 (Join-Path $docs '.nojekyll') "`n"
 
 Write-Host "GitHub Pages listo en $docs"

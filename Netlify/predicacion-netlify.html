@@ -4,7 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#2c3e50" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Salidas" />
     <title>Salidas — cierre</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -70,6 +76,21 @@
             font-weight: 600;
             color: rgba(255,255,255,.78);
             line-height: 1.35;
+        }
+        .hint.sync-error { color: #ffcdd2; }
+        .install-btn {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 8px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,.5);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-weight: 800;
+            font-size: 12px;
+            min-height: 32px;
+            cursor: pointer;
         }
         .day-section { margin-bottom: 10px; }
         .day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 2px 0 4px; }
@@ -222,7 +243,8 @@
             <h1 id="header-text">Salidas de predicación</h1>
             <button type="button" class="btn btn-agregados" id="btn-agregados">Agregados</button>
         </div>
-        <p class="hint" id="hint-text">Las operaciones pueden tardar unos momentos.</p>
+        <p class="hint" id="hint-text">Los cambios se guardan en el teléfono y se envían a Google en segundo plano.</p>
+        <button type="button" class="install-btn" id="btn-instalar" hidden>Instalar aplicación</button>
     </div>
 </div>
 
@@ -239,14 +261,28 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="./google.js"></script>
+<script src="./cola-local.js"></script>
 <script>
-    const HINT_LATENCIA = 'Las operaciones pueden tardar unos momentos.';
+    const HINT_LISTO = 'Los cambios se guardan en el teléfono y se envían a Google en segundo plano.';
     const root = document.getElementById('root');
     const headerText = document.getElementById('header-text');
     const hintText = document.getElementById('hint-text');
 
     function setHintLatencia() {
-        if (hintText) hintText.textContent = HINT_LATENCIA;
+        if (!hintText) return;
+        const resumen = window.ColaLocal && typeof ColaLocal.resumen === 'function' ? ColaLocal.resumen() : null;
+        hintText.classList.toggle('sync-error', !!(resumen && resumen.error));
+        if (resumen && resumen.error) {
+            hintText.textContent = 'Guardado en el teléfono. Google no confirmó; se reintenta solo.';
+            return;
+        }
+        if (resumen && resumen.pendientes > 0) {
+            hintText.textContent = resumen.pendientes === 1
+                ? 'Guardado en el teléfono. Enviando a Google…'
+                : ('Guardado en el teléfono. Enviando ' + resumen.pendientes + ' cambios a Google…');
+            return;
+        }
+        hintText.textContent = HINT_LISTO;
     }
     const territorioModal = document.getElementById('territorio-modal');
     const tmTitle = document.getElementById('tm-title');
@@ -282,8 +318,10 @@
     let tmMiniMapa = null;
     let tmMiniMapaLayer = null;
 
-    /** Ultima lectura de acciones_colaboradores con procesado=false (una fila por territorio, la mas reciente por creado_en). */
+    /** Ultima lectura de acciones pendientes en Google (una fila por territorio, la mas reciente). */
     let pendientesNubePorNumero = new Map();
+    let ultimasPendientesServidor = [];
+    let vistaLista = false;
 
     const TIPOS_PENDIENTE_VISTA = new Set([
         'cerrar-sin-hecho',
@@ -319,6 +357,74 @@
         return id == null ? null : id;
     }
 
+    function serverIdDePendiente(id) {
+        if (id == null) return null;
+        if (typeof id === 'number' && isFinite(id)) return id;
+        const s = String(id).trim();
+        if (!s || s.indexOf('local-') === 0) return null;
+        if (!/^\d+$/.test(s)) return null;
+        return Number(s);
+    }
+
+    function numeroDeFilaPendiente(row) {
+        return String((row && row.payload && row.payload.numero) || '').trim();
+    }
+
+    function filaDesdeCola(reg) {
+        return {
+            id: reg.serverId != null ? reg.serverId : reg.localId,
+            tipo: reg.tipo,
+            payload: reg.payload,
+            origen: 'predicacion-github',
+            creado_en: reg.creado_en,
+            _local: true,
+            _estado: reg.estado,
+            _error: reg.error || ''
+        };
+    }
+
+    async function fusionarPendientes(rowsServidor) {
+        const desdeNube = new Map();
+        const rows = Array.isArray(rowsServidor) ? rowsServidor : [];
+        for (const row of rows) {
+            if (!row || !tipoPendienteAfectaVista(row.tipo)) continue;
+            const num = numeroDeFilaPendiente(row);
+            if (!num) continue;
+            const prev = desdeNube.get(num);
+            const tNew = row.creado_en ? new Date(row.creado_en).getTime() : 0;
+            const tPrev = prev && prev.creado_en ? new Date(prev.creado_en).getTime() : -1;
+            if (!prev || tNew >= tPrev) desdeNube.set(num, row);
+        }
+        const locales = window.ColaLocal ? await ColaLocal.listar() : [];
+        const ocultar = new Set();
+        const overlay = new Map();
+        for (const reg of locales) {
+            const num = String(reg.numero || '').trim();
+            if (!num) continue;
+            if (reg.estado === 'eliminar') {
+                ocultar.add(num);
+                continue;
+            }
+            if (!tipoPendienteAfectaVista(reg.tipo)) continue;
+            overlay.set(num, filaDesdeCola(reg));
+        }
+        pendientesNubePorNumero = new Map();
+        for (const [num, row] of desdeNube) {
+            if (ocultar.has(num) || overlay.has(num)) continue;
+            pendientesNubePorNumero.set(num, row);
+        }
+        for (const [num, row] of overlay) pendientesNubePorNumero.set(num, row);
+    }
+
+    function renderListaConservandoScroll() {
+        const y = window.scrollY;
+        if (salidasRows.length || filasSalidasParaVista().length) {
+            renderDesdeSalidas();
+            vistaLista = true;
+        }
+        window.scrollTo(0, y);
+    }
+
     function etiquetaAccionCierre(accion) {
         const a = String(accion || '').trim();
         if (a === 'completado') return 'Completado';
@@ -328,25 +434,15 @@
     }
 
     async function refrescarPendientesNube() {
-        pendientesNubePorNumero = new Map();
-        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.listarAccionesPendientes !== 'function') {
-            return;
-        }
-        try {
-            const rows = await window.TerritoriosGoogle.listarAccionesPendientes();
-            if (!Array.isArray(rows)) return;
-            for (const row of rows) {
-                if (!row || !tipoPendienteAfectaVista(row.tipo)) continue;
-                const num = String((row.payload && row.payload.numero) || '').trim();
-                if (!num) continue;
-                const prev = pendientesNubePorNumero.get(num);
-                const tNew = row.creado_en ? new Date(row.creado_en).getTime() : 0;
-                const tPrev = prev && prev.creado_en ? new Date(prev.creado_en).getTime() : -1;
-                if (!prev || tNew >= tPrev) pendientesNubePorNumero.set(num, row);
+        if (window.TerritoriosGoogle && typeof window.TerritoriosGoogle.listarAccionesPendientes === 'function') {
+            try {
+                const rows = await window.TerritoriosGoogle.listarAccionesPendientes();
+                if (Array.isArray(rows)) ultimasPendientesServidor = rows;
+            } catch (err) {
+                console.warn('No se pudieron cargar acciones pendientes en Google Sheets:', err);
             }
-        } catch (err) {
-            console.warn('No se pudieron cargar acciones pendientes en Google Sheets:', err);
         }
+        await fusionarPendientes(ultimasPendientesServidor);
     }
 
     function filasSalidasParaVista() {
@@ -434,13 +530,21 @@
         else if (tipo === 'cerrar-con-accion') cabezas.push('Cierre: <strong>' + escapeHtml(etiquetaAccionCierre(p.accion)) + '</strong>.');
         else if (tipo === 'guardar-edicion-salida') cabezas.push('Hay un <strong>ajuste de salida</strong> guardado como pendiente.');
         else if (tipo === 'agregado-accion') cabezas.push('Hay un <strong>agregado manual</strong> pendiente.');
-        cabezas.push(
-            'Estado en <strong>Google Sheets</strong> (aún no aplicado en Access). Podés modificar la acción o eliminarla antes de ejecutar <code>Sync-GoogleToAccess.ps1</code>.'
-        );
+        const local = ent.row && ent.row._local;
+        const estadoLocal = ent.row && ent.row._estado;
+        if (local && estadoLocal === 'error') {
+            cabezas.push('Está en este teléfono. Google no confirmó el envío y se reintenta solo.');
+        } else if (local) {
+            cabezas.push('Guardado en este teléfono. Se envía a Google en segundo plano.');
+        } else {
+            cabezas.push(
+                'Estado en <strong>Google Sheets</strong> (aún no aplicado en Access). Podés modificar la acción o eliminarla antes de ejecutar <code>Sync-GoogleToAccess.ps1</code>.'
+            );
+        }
         let btn = '';
         if (ent.row && ent.row.id != null) {
             btn =
-                '<button type="button" class="modal-btn modal-btn-red" id="tm-eliminar-pendiente">Eliminar pendiente en Google Sheets</button>';
+                '<button type="button" class="modal-btn modal-btn-red" id="tm-eliminar-pendiente">Quitar esta acción pendiente</button>';
         }
         return (
             '<div class="tm-pendiente-banner" id="tm-pendiente-banner">' +
@@ -452,29 +556,14 @@
     }
 
     async function eliminarPendienteTerritorioActual() {
-        const nube = window.TerritoriosGoogle;
-        if (!nube) {
-            throw new Error('Módulo Google no cargado.');
-        }
         const num = String(territorioSeleccionado || '').trim();
-        if (!num) {
-            throw new Error('Territorio no seleccionado.');
-        }
+        if (!num) throw new Error('Territorio no seleccionado.');
+        if (!window.ColaLocal) throw new Error('Cola local no cargada.');
         const id = idPendienteParaNumero(num);
-        if (typeof nube.eliminarAccionesPendientesPorNumero === 'function') {
-            try {
-                await nube.eliminarAccionesPendientesPorNumero(num);
-                return;
-            } catch (errPorNumero) {
-                if (!id || typeof nube.eliminarAccion !== 'function') throw errPorNumero;
-                const msg = String(errPorNumero && errPorNumero.message ? errPorNumero.message : errPorNumero);
-                if (!/No se eliminó ninguna/i.test(msg)) throw errPorNumero;
-            }
-        }
-        if (!id || typeof nube.eliminarAccion !== 'function') {
-            throw new Error('No hay acción pendiente identificada para este territorio.');
-        }
-        await nube.eliminarAccion(id);
+        const ent = mapaPendientesEfectivo().get(num);
+        const sidFila = ent && ent.row && ent.row._local ? null : serverIdDePendiente(id);
+        await ColaLocal.encolarEliminacion(num, sidFila != null ? sidFila : serverIdDePendiente(id));
+        await fusionarPendientes(ultimasPendientesServidor);
     }
 
     function adjuntarEliminarPendienteSiCorresponde() {
@@ -485,13 +574,12 @@
                 tmError.textContent = 'Error: módulo Google no cargado.';
                 return;
             }
-            if (!confirm('¿Eliminar esta acción pendiente en Google Sheets? El territorio volverá a mostrarse como antes en esta vista.')) return;
+            if (!confirm('¿Quitar esta acción pendiente? El territorio vuelve a mostrarse como antes en esta vista.')) return;
             tmError.textContent = '';
             tmError.classList.remove('modal-msg-ok');
             btnDel.disabled = true;
             try {
                 await eliminarPendienteTerritorioActual();
-                await refrescarPendientesNube();
                 renderDesdeSalidas();
                 cerrarModalTerritorio();
             } catch (e) {
@@ -734,6 +822,7 @@
 
     function renderDesdeSalidas() {
         renderLista(aplicarPendientesAParseRows(parseRows(filasSalidasParaVista())));
+        vistaLista = true;
     }
 
     function esErrorDatosNube(err) {
@@ -818,23 +907,19 @@
         if (!nube || typeof nube.guardarAccion !== 'function') {
             throw new Error('Sin servidor local (/api) ni módulo Google para guardar la acción.');
         }
-        if (reemplazarId != null && typeof nube.actualizarAccion === 'function') {
-            try {
-                await nube.actualizarAccion(reemplazarId, tipo, payload);
-                await refrescarPendientesNube();
-                return 'google';
-            } catch (err) {
-                const msg = err && err.message ? err.message : String(err);
-                throw new Error('No se pudo actualizar la acción en Google Sheets: ' + msg);
-            }
-        }
+        if (!window.ColaLocal) throw new Error('Cola local no cargada.');
         try {
-            await nube.guardarAccion(tipo, payload);
-            await refrescarPendientesNube();
-            return 'google';
+            await ColaLocal.encolar({
+                numero: String((payload && payload.numero) || '').trim(),
+                tipo: tipo,
+                payload: payload,
+                serverId: serverIdDePendiente(reemplazarId)
+            });
+            await fusionarPendientes(ultimasPendientesServidor);
+            return 'local';
         } catch (err) {
             const msg = err && err.message ? err.message : String(err);
-            throw new Error('No se pudo guardar en Google Sheets: ' + msg);
+            throw new Error('No se pudo guardar la edición en el teléfono: ' + msg);
         }
     }
 
@@ -897,7 +982,9 @@
                 renderDesdeSalidas();
             }
             tmError.classList.add('modal-msg-ok');
-            tmError.textContent = modo === 'api' ? 'Cambios guardados.' : 'Cambios guardados en Google Sheets.';
+            tmError.textContent = modo === 'api'
+                ? 'Cambios guardados.'
+                : 'Guardado en el teléfono. Se envía a Google en segundo plano.';
         } catch (err) {
             tmError.textContent = 'Error: ' + err.message;
         }
@@ -1905,23 +1992,59 @@
         await cargarDesdeGoogle(false);
     }
 
-    async function cargarDesdeGoogle(showLoading) {
-        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.cargarDatosSemana !== 'function') {
-            throw new Error('Modulo Google no cargado.');
-        }
-        if (showLoading !== false) {
-            setHintLatencia();
-            root.innerHTML = '<div class="empty">Cargando...</div>';
-        }
-        const json = await window.TerritoriosGoogle.cargarDatosSemana();
-        const bundle = normalizarBundle(json);
+    function aplicarBundleEnMemoria(bundle) {
         salidasRows = Array.isArray(bundle.salidas) ? bundle.salidas.slice() : [];
         catalogoResponsables = bundle.responsables || [];
         catalogoTerritorios = bundle.territorios || [];
         catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO, bundle.descripciones || {});
         sembrarDescripcionesDesdeSalidas(salidasRows);
         tmAgregadosCache = null;
+    }
+
+    async function guardarSnapshotActual() {
+        if (!window.ColaLocal || typeof ColaLocal.guardarSnapshot !== 'function') return;
+        try {
+            await ColaLocal.guardarSnapshot({
+                bundle: {
+                    salidas: salidasRows,
+                    responsables: catalogoResponsables,
+                    territorios: catalogoTerritorios,
+                    descripciones: catalogoDescripciones
+                },
+                pendientes: ultimasPendientesServidor
+            });
+        } catch (_) {}
+    }
+
+    async function pintarSnapshot() {
+        if (!window.ColaLocal || typeof ColaLocal.leerSnapshot !== 'function') return false;
+        const snap = await ColaLocal.leerSnapshot();
+        if (!snap || !snap.bundle) return false;
+        let bundle;
+        try { bundle = normalizarBundle(snap.bundle); }
+        catch (_) { return false; }
+        if (!Array.isArray(bundle.salidas) || !bundle.salidas.length) return false;
+        aplicarBundleEnMemoria(bundle);
+        ultimasPendientesServidor = Array.isArray(snap.pendientes) ? snap.pendientes : [];
+        await fusionarPendientes(ultimasPendientesServidor);
+        renderDesdeSalidas();
+        setHintLatencia();
+        return true;
+    }
+
+    async function cargarDesdeGoogle(showLoading) {
+        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.cargarDatosSemana !== 'function') {
+            throw new Error('Modulo Google no cargado.');
+        }
+        if (showLoading !== false && !vistaLista) {
+            setHintLatencia();
+            root.innerHTML = '<div class="empty">Cargando...</div>';
+        }
+        const json = await window.TerritoriosGoogle.cargarDatosSemana();
+        const bundle = normalizarBundle(json);
+        aplicarBundleEnMemoria(bundle);
         await refrescarPendientesNube();
+        await guardarSnapshotActual();
         if (!salidasRows.length && filasSalidasParaVista().length === 0) {
             mostrarEstadoSinDatosNube();
             return;
@@ -1930,10 +2053,101 @@
         setHintLatencia();
     }
 
+    function adaptadorGoogle() {
+        const nube = window.TerritoriosGoogle || {};
+        return {
+            guardar: function (tipo, payload) { return nube.guardarAccion(tipo, payload); },
+            actualizar: function (id, tipo, payload) { return nube.actualizarAccion(id, tipo, payload); },
+            eliminar: async function (id, numero) {
+                if (numero && typeof nube.eliminarAccionesPendientesPorNumero === 'function') {
+                    try {
+                        return await nube.eliminarAccionesPendientesPorNumero(numero);
+                    } catch (err) {
+                        const msg = String(err && err.message ? err.message : err);
+                        if (/No se eliminó ninguna/i.test(msg)) return { id: id };
+                        if (id == null || typeof nube.eliminarAccion !== 'function') throw err;
+                    }
+                }
+                if (id == null || typeof nube.eliminarAccion !== 'function') {
+                    throw new Error('No hay acción pendiente para eliminar.');
+                }
+                return nube.eliminarAccion(id);
+            }
+        };
+    }
+
+    function engancharCola() {
+        if (!window.ColaLocal || engancharCola.hecho) return;
+        engancharCola.hecho = true;
+        ColaLocal.onResultado(function (ev) {
+            if (!ev || !ev.numero) return;
+            ultimasPendientesServidor = ultimasPendientesServidor.filter(function (row) {
+                return numeroDeFilaPendiente(row) !== ev.numero;
+            });
+            if (ev.tipo === 'confirmado' && ev.row) ultimasPendientesServidor.push(ev.row);
+        });
+        ColaLocal.onCambio(function () {
+            fusionarPendientes(ultimasPendientesServidor).then(function () {
+                setHintLatencia();
+                if (vistaLista) renderListaConservandoScroll();
+            }).catch(function () {});
+        });
+        ColaLocal.arrancar(adaptadorGoogle());
+    }
+
+    function prepararInstalacion() {
+        const btn = document.getElementById('btn-instalar');
+        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+        let diferido = null;
+        window.addEventListener('beforeinstallprompt', function (ev) {
+            ev.preventDefault();
+            diferido = ev;
+            if (btn) {
+                btn.hidden = false;
+                btn.textContent = 'Instalar aplicación';
+            }
+        });
+        if (btn) {
+            btn.addEventListener('click', async function () {
+                if (diferido) {
+                    diferido.prompt();
+                    try { await diferido.userChoice; } catch (_) {}
+                    diferido = null;
+                    btn.hidden = true;
+                    return;
+                }
+                if (ios && !standalone) {
+                    alert('En iPhone: tocá Compartir y después Agregar a inicio.');
+                }
+            });
+        }
+        if (ios && !standalone && btn) {
+            btn.hidden = false;
+            btn.textContent = 'Cómo instalar';
+        }
+        window.addEventListener('appinstalled', function () {
+            if (btn) btn.hidden = true;
+        });
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function (err) {
+                console.warn('No se pudo registrar la aplicación instalable:', err);
+            });
+        }
+    }
+
     async function cargar() {
+        engancharCola();
+        let conSnapshot = false;
+        try { conSnapshot = await pintarSnapshot(); }
+        catch (_) { conSnapshot = false; }
         try {
             await recargarDatosPreferApi();
         } catch (e) {
+            if (conSnapshot) {
+                setHintLatencia();
+                return;
+            }
             if (esErrorDatosNube(e)) {
                 mostrarErrorNube(e);
                 return;
@@ -1950,6 +2164,7 @@
         if (ev.target === territorioModal) cerrarModalTerritorio();
     });
 
+    prepararInstalacion();
     window.addEventListener('load', cargar);
 </script>
 </body>
