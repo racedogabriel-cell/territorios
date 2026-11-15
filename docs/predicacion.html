@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1a1a" />
+    <meta name="description" content="Salidas de predicación. Solo consulta." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Salidas" />
+    <title>Salidas de predicación</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --primary-bg: #f2f5f8;
+            --accent: #b78b1e;
+            --accent-bg: #fdf5e6;
+            --danger: #cc0000;
+            --bg: #ffffff;
+            --k: 0.72;
+            --group-1-bg: #d9e7ff;
+            --group-1-fg: #034cbc;
+            --group-1-accent: #0062ff;
+            --group-2-bg: #e8fad9;
+            --group-2-fg: #4ca604;
+            --group-2-accent: #65e000;
+            --group-3-bg: #fed9e6;
+            --group-3-fg: #b70543;
+            --group-3-accent: #fa0057;
+            --group-default-bg: #eef2f6;
+            --group-default-fg: #2c3e50;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            background: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            min-height: 100dvh;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+
+        .controls {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+            background: #1a1a1a;
+        }
+
+        .vista-nota {
+            width: 100%;
+            text-align: center;
+            color: #c8c8c8;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .date-range-control {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+            gap: 6px 8px;
+            width: min(100%, 340px);
+            background: #fff;
+            padding: 8px 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: 800;
+            font-size: 13px;
+            color: #111;
+        }
+
+        .date-range-control label { white-space: nowrap; }
+
+        .date-range-control input[type="date"] {
+            width: 100%;
+            min-width: 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            min-height: 36px;
+            background: #fff;
+            color: #111;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            min-height: 40px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+        }
+
+        .btn:disabled { opacity: 0.65; cursor: default; }
+
+        .btn-upload { background: #eee; color: #000; }
+
+        .canvas {
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: calc(10px * var(--k)) 12px;
+            text-align: center;
+            border-bottom: calc(5px * var(--k)) solid var(--accent);
+        }
+
+        .header h1 {
+            font-size: calc(32px * var(--k));
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1.15;
+        }
+
+        .day-block {
+            display: flex;
+            border-bottom: calc(4px * var(--k)) solid #ccc;
+            min-height: calc(92px * var(--k));
+        }
+
+        .day-sidebar {
+            background: var(--primary-bg);
+            color: var(--primary);
+            width: calc(65px * var(--k));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: calc(8px * var(--k));
+            flex-shrink: 0;
+            border-right: 1px solid #ccc;
+            padding: calc(8px * var(--k)) 0;
+        }
+
+        .day-sidebar.weekend { background: var(--accent-bg); color: var(--accent); }
+
+        .day-name,
+        .day-num {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .day-num { font-size: calc(30px * var(--k)); }
+
+        .day-name {
+            font-size: calc(24px * var(--k));
+            text-transform: uppercase;
+        }
+
+        .meetings-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .meeting {
+            padding: calc(8px * var(--k)) calc(12px * var(--k));
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .meeting:last-child { border-bottom: none; }
+
+        .meeting:nth-child(even) { background-color: #fafafa; }
+
+        .meeting.meeting--pueblo,
+        .meeting.meeting--pueblo:nth-child(even) { background-color: #f3e8dc; }
+
+        .row-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: calc(6px * var(--k)) calc(10px * var(--k));
+            width: 100%;
+        }
+
+        .time {
+            font-size: calc(55px * var(--k));
+            font-weight: 900;
+            color: #000;
+            line-height: 1;
+            flex-shrink: 0;
+            display: inline-block;
+            white-space: nowrap;
+            transform: scaleX(0.8);
+            transform-origin: left center;
+        }
+
+        .info-group {
+            flex: 1 1 8rem;
+            min-width: 0;
+            display: block;
+        }
+
+        .place {
+            font-size: calc(34px * var(--k));
+            font-weight: 800;
+            color: #1a1a1a;
+            line-height: 1.1;
+            display: block;
+            margin-bottom: 2px;
+            overflow-wrap: anywhere;
+        }
+
+        .place--group-1 { color: var(--group-1-fg); }
+        .place--group-2 { color: var(--group-2-fg); }
+        .place--group-3 { color: var(--group-3-fg); }
+        .place--group-default { color: var(--group-default-fg); }
+
+        .sub-info {
+            font-size: calc(18px * var(--k));
+            font-weight: 700;
+            color: #555;
+            line-height: 1.25;
+            display: block;
+            overflow-wrap: anywhere;
+        }
+
+        .group-pill {
+            display: inline-block;
+            padding: calc(2px * var(--k)) calc(8px * var(--k));
+            border-radius: calc(6px * var(--k));
+            line-height: 1.2;
+            border-left: calc(4px * var(--k)) solid transparent;
+        }
+
+        .group-pill--1 { background: var(--group-1-bg); border-left-color: var(--group-1-accent); }
+        .group-pill--2 { background: var(--group-2-bg); border-left-color: var(--group-2-accent); }
+        .group-pill--3 { background: var(--group-3-bg); border-left-color: var(--group-3-accent); }
+        .group-pill--default { background: var(--group-default-bg); }
+
+        .group-pill-label { font-weight: 900; text-transform: uppercase; }
+
+        .group-pill--1 .group-pill-label { color: var(--group-1-fg); }
+        .group-pill--2 .group-pill-label { color: var(--group-2-fg); }
+        .group-pill--3 .group-pill-label { color: var(--group-3-fg); }
+        .group-pill--default .group-pill-label { color: var(--group-default-fg); }
+
+        .group-pill-resp {
+            font-weight: 700;
+            color: #555;
+            text-transform: none;
+        }
+
+        .terr-badges {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            margin-left: auto;
+            max-width: 100%;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: #fff;
+            padding: calc(6px * var(--k)) calc(12px * var(--k));
+            border-radius: 6px;
+            font-size: calc(34px * var(--k));
+            font-weight: 900;
+            border: 4px solid transparent;
+            line-height: 1;
+        }
+
+        .badge.note { background: var(--accent); color: #fff; }
+        .badge.danger-border { border-color: var(--danger); }
+        .badge.badge-pueblo {
+            background: #7b4f2e;
+            color: #fff;
+            font-size: calc(26px * var(--k));
+            padding: calc(6px * var(--k)) calc(14px * var(--k));
+            letter-spacing: 0.02em;
+        }
+
+        .alert-box {
+            padding: 4px 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            font-size: calc(18px * var(--k));
+            font-weight: 400;
+            line-height: 1.25;
+            border-left: 4px solid;
+            overflow-wrap: anywhere;
+        }
+
+        .alert-box.manzanas { background: #fef9e7; border-left-color: var(--accent); color: #444; }
+        .alert-box.no-visitar { background: #fdedec; border-left-color: var(--danger); color: #444; }
+
+        .vacio {
+            padding: 20px 16px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .vacio.error { color: #b00020; }
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <div class="vista-nota">Solo consulta</div>
+    <button class="btn btn-upload" id="btn-actualizar" type="button">Actualizar</button>
+    <div class="date-range-control">
+        <label for="filtro-desde">Desde</label>
+        <input type="date" id="filtro-desde" />
+        <label for="filtro-hasta">Hasta</label>
+        <input type="date" id="filtro-hasta" />
+    </div>
+</div>
+
+<div class="canvas" id="capture">
+    <div class="header"><h1 id="header-text">Salidas de predicación</h1></div>
+    <div id="root"></div>
+</div>
+
+<script src="google.js"></script>
+<script>
+    const root = document.getElementById('root');
+    const headerText = document.getElementById('header-text');
+    const btnActualizar = document.getElementById('btn-actualizar');
+    const filtroDesdeEl = document.getElementById('filtro-desde');
+    const filtroHastaEl = document.getElementById('filtro-hasta');
+    const FILTRO_FECHAS_KEY = 'predicacion.vista.filtroFechas';
+    const FALLBACK_DESCRIPCIONES_PUEBLO = {
+        '200': 'Cadret',
+        '201': 'Algarrobo',
+        '202': 'Moctezuma',
+        '203': 'Hirch',
+        '204': 'Smith',
+        '205': 'Hortencia',
+        '206': 'Ordoqui',
+        '207': 'Santo Tomas'
+    };
+
+    let salidasCache = [];
+    let catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO);
+    const descripcionPorNumeroMemo = {};
+    let cargando = false;
+
+    function fechaLocalDesdeDate(d) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function sumarDiasLocal(d, dias) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias);
+    }
+
+    function defaultsFiltroFechas() {
+        const hoy = new Date();
+        return {
+            desde: fechaLocalDesdeDate(hoy),
+            hasta: fechaLocalDesdeDate(sumarDiasLocal(hoy, 6))
+        };
+    }
+
+    function leerFiltroFechasGuardado() {
+        try {
+            const raw = localStorage.getItem(FILTRO_FECHAS_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.desde || !parsed.hasta) return null;
+            return { desde: String(parsed.desde), hasta: String(parsed.hasta) };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function guardarFiltroFechas() {
+        localStorage.setItem(FILTRO_FECHAS_KEY, JSON.stringify({
+            desde: filtroDesdeEl.value || '',
+            hasta: filtroHastaEl.value || ''
+        }));
+    }
+
+    function onFiltroFechasChange() {
+        if (filtroDesdeEl.value && filtroHastaEl.value && filtroDesdeEl.value > filtroHastaEl.value) {
+            if (document.activeElement === filtroDesdeEl) filtroHastaEl.value = filtroDesdeEl.value;
+            else filtroDesdeEl.value = filtroHastaEl.value;
+        }
+        guardarFiltroFechas();
+        renderFiltrado();
+    }
+
+    function inicializarFiltroFechas() {
+        const def = defaultsFiltroFechas();
+        const saved = leerFiltroFechasGuardado();
+        filtroDesdeEl.value = (saved && saved.desde) || def.desde;
+        filtroHastaEl.value = (saved && saved.hasta) || def.hasta;
+        if (filtroDesdeEl.value && filtroHastaEl.value && filtroDesdeEl.value > filtroHastaEl.value) {
+            filtroHastaEl.value = filtroDesdeEl.value;
+        }
+        filtroDesdeEl.addEventListener('change', onFiltroFechasChange);
+        filtroHastaEl.addEventListener('change', onFiltroFechasChange);
+    }
+
+    function filtrarSalidasPorRango(data) {
+        const desde = filtroDesdeEl.value || '';
+        const hasta = filtroHastaEl.value || '';
+        if (!desde && !hasta) return data;
+        return data.filter((it) => {
+            const key = fechaLocalDesdeDate(it.d);
+            if (desde && key < desde) return false;
+            if (hasta && key > hasta) return false;
+            return true;
+        });
+    }
+
+    function renderFiltrado() {
+        render(filtrarSalidasPorRango(salidasCache));
+    }
+
+    function esTerritorioPueblo(t) {
+        const n = parseInt(t, 10);
+        return !isNaN(n) && n >= 200;
+    }
+
+    function descripcionTerritorio(numero, fallbackDesc) {
+        const num = String(numero ?? '').trim();
+        const direct = String(fallbackDesc ?? '').trim();
+        if (direct) {
+            descripcionPorNumeroMemo[num] = direct;
+            return direct;
+        }
+        if (descripcionPorNumeroMemo[num]) return descripcionPorNumeroMemo[num];
+        const fromCat = String(catalogoDescripciones[num] || '').trim();
+        if (fromCat) {
+            descripcionPorNumeroMemo[num] = fromCat;
+            return fromCat;
+        }
+        return '';
+    }
+
+    function etiquetaTerritorio(numero, fallbackDesc) {
+        const desc = descripcionTerritorio(numero, fallbackDesc);
+        if (desc) return desc;
+        return esTerritorioPueblo(numero) ? `Pueblo T-${numero}` : String(numero ?? '');
+    }
+
+    function normalizarBundle(json) {
+        if (Array.isArray(json)) {
+            return { salidas: json, descripciones: {} };
+        }
+        if (json && typeof json === 'object' && Array.isArray(json.salidas)) {
+            const descripciones = {};
+            if (json.descripciones && typeof json.descripciones === 'object') {
+                for (const [k, v] of Object.entries(json.descripciones)) {
+                    const num = String(k || '').trim();
+                    const desc = String(v || '').trim();
+                    if (num && desc) descripciones[num] = desc;
+                }
+            }
+            return { salidas: json.salidas, descripciones };
+        }
+        throw new Error('Formato inválido: se esperaba un objeto con salidas.');
+    }
+
+    function parseRows(rows) {
+        if (!Array.isArray(rows)) return [];
+        function parseFechaFlexible(v) {
+            if (!v) return new Date('');
+            const txt = String(v).trim();
+            let d = new Date(txt);
+            if (!isNaN(d)) return d;
+            d = new Date(txt.replace('T', ' ').replace(/-/g, '/'));
+            return d;
+        }
+        return rows.map((item) => ({
+            t: item.NumeroTerritorio || '',
+            p: item.PuntosDeEncuentros || '',
+            r: item.Responsables || '',
+            g: item.Grupos || '',
+            d: parseFechaFlexible(item.Enviado),
+            pr: Number.isFinite(Number(item.Prioridad)) ? Number(item.Prioridad) : NaN,
+            m: item.ManzanasPendientes || '',
+            nv: item.Direccion || '',
+            desc: String(item.Descripcion || item.descripcion || '').trim()
+        })).filter((x) => !isNaN(x.d)).sort((a, b) => a.d - b.d);
+    }
+
+    function escapeHtml(txt) {
+        return String(txt ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function groupPillVariant(groupName) {
+        const match = String(groupName || '').trim().match(/^grupo\s*(\d+)\b/i);
+        if (!match) return 'default';
+        return ['1', '2', '3'].includes(match[1]) ? match[1] : 'default';
+    }
+
+    function htmlGroupBlock(groupName, responsables) {
+        const variant = groupPillVariant(groupName);
+        const label = `${escapeHtml(String(groupName).trim())}:`;
+        const resps = escapeHtml(responsables);
+        return `<span class="group-pill group-pill--${variant}"><span class="group-pill-label">${label}</span> <span class="group-pill-resp">${resps}</span></span>`;
+    }
+
+    function htmlBadgeTerritorioSalida(it) {
+        const esPueblo = esTerritorioPueblo(it.t);
+        let cls = 'badge';
+        if (esPueblo) cls += ' badge-pueblo';
+        if (it.m) cls += ' note';
+        if (it.nv) cls += ' danger-border';
+        return `<div class="${cls}">${escapeHtml(etiquetaTerritorio(it.t, it.desc))}</div>`;
+    }
+
+    function fmtDiaMes(isoOrDate) {
+        if (isoOrDate instanceof Date) {
+            return `${isoOrDate.getDate()}/${isoOrDate.getMonth() + 1}`;
+        }
+        const m = String(isoOrDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) return `${Number(m[3])}/${Number(m[2])}`;
+        return '';
+    }
+
+    function mensajeVacio(texto, esError) {
+        root.innerHTML = `<div class="vacio${esError ? ' error' : ''}">${escapeHtml(texto)}</div>`;
+    }
+
+    function render(data) {
+        const desdeTxt = fmtDiaMes(filtroDesdeEl.value) || (data[0] ? fmtDiaMes(data[0].d) : '');
+        const hastaTxt = fmtDiaMes(filtroHastaEl.value) || (data.length ? fmtDiaMes(data[data.length - 1].d) : '');
+        headerText.textContent = (desdeTxt && hastaTxt)
+            ? `Salidas de predicación • ${desdeTxt} al ${hastaTxt}`
+            : 'Salidas de predicación';
+
+        if (!data.length) {
+            mensajeVacio('No hay salidas en el rango seleccionado.');
+            return;
+        }
+
+        const daysMap = new Map();
+        data.forEach((it) => {
+            const dK = it.d.toDateString();
+            if (!daysMap.has(dK)) daysMap.set(dK, new Map());
+            const tStr = it.d.getHours() + ':' + String(it.d.getMinutes()).padStart(2, '0');
+            const meetKey = tStr + '|' + it.p + '|' + (it.g || '');
+            if (!daysMap.get(dK).has(meetKey)) {
+                daysMap.get(dK).set(meetKey, { time: tStr, place: it.p, items: [] });
+            }
+            daysMap.get(dK).get(meetKey).items.push(it);
+        });
+
+        let html = '';
+        daysMap.forEach((meetings, dayKey) => {
+            const dObj = new Date(dayKey);
+            const dNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+            const isW = dObj.getDay() === 0 || dObj.getDay() === 6;
+
+            html += `<div class="day-block">
+                <div class="day-sidebar ${isW ? 'weekend' : ''}">
+                    <div class="day-num">${dObj.getDate()}</div>
+                    <div class="day-name">${dNames[dObj.getDay()]}</div>
+                </div>
+                <div class="meetings-container">`;
+
+            meetings.forEach((m) => {
+                m.items.sort((a, b) => {
+                    const pa = isNaN(a.pr) ? Number.MAX_SAFE_INTEGER : a.pr;
+                    const pb = isNaN(b.pr) ? Number.MAX_SAFE_INTEGER : b.pr;
+                    return pa - pb;
+                });
+
+                const resps = [...new Set(m.items.map((i) => i.r))].join(' / ');
+                const groupName = m.items[0].g;
+                const isCongregacional = !groupName || groupName.toLowerCase() === 'congregacional';
+                const placeCls = isCongregacional ? 'place' : `place place--group-${groupPillVariant(groupName)}`;
+                const tienePueblo = m.items.some((it) => esTerritorioPueblo(it.t));
+                const meetingCls = tienePueblo ? 'meeting meeting--pueblo' : 'meeting';
+
+                html += `<div class="${meetingCls}">
+                    <div class="row-main">
+                        <div class="time">${escapeHtml(m.time)}</div>
+                        <div class="info-group">
+                            <span class="${placeCls}">${escapeHtml(m.place)}</span>
+                            <div class="sub-info">
+                                ${!isCongregacional ? htmlGroupBlock(groupName, resps) : escapeHtml(resps)}
+                            </div>
+                        </div>
+                        <div class="terr-badges">
+                            ${m.items.map((it) => htmlBadgeTerritorioSalida(it)).join('')}
+                        </div>
+                    </div>
+                    ${m.items.some((i) => i.m) ? `
+                        <div class="alert-box manzanas">
+                            ${m.items.filter((i) => i.m).map((i) => `<div>T-${escapeHtml(i.t)}: ${escapeHtml(i.m)}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${m.items.some((i) => i.nv) ? `
+                        <div class="alert-box no-visitar">
+                            ${m.items.filter((i) => i.nv).map((i) => `<div>T-${escapeHtml(i.t)} NO VISITAR: ${escapeHtml(i.nv)}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>`;
+            });
+            html += '</div></div>';
+        });
+        root.innerHTML = html;
+        requestAnimationFrame(ajustarAnchoHorarios);
+    }
+
+    function ajustarAnchoHorarios() {
+        root.querySelectorAll('.time').forEach((el) => {
+            el.style.marginRight = '0';
+            el.style.marginRight = `${-(el.offsetWidth * 0.2)}px`;
+        });
+    }
+
+    function escalaMovil() {
+        const lienzo = document.getElementById('capture');
+        const ancho = (lienzo && lienzo.clientWidth) || window.innerWidth;
+        let k = ancho / 540;
+        if (k < 0.52) k = 0.52;
+        if (k > 0.88) k = 0.88;
+        document.documentElement.style.setProperty('--k', String(Math.round(k * 1000) / 1000));
+        ajustarAnchoHorarios();
+    }
+
+    function aplicarBundle(bundle) {
+        catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO, bundle.descripciones || {});
+        for (const [num, desc] of Object.entries(catalogoDescripciones)) {
+            const d = String(desc || '').trim();
+            if (d) descripcionPorNumeroMemo[String(num).trim()] = d;
+        }
+        salidasCache = parseRows(bundle.salidas);
+        for (const it of salidasCache) {
+            if (it.desc) descripcionPorNumeroMemo[String(it.t).trim()] = it.desc;
+        }
+    }
+
+    function mostrarSemanaPublicadaSiNoHayFiltro() {
+        if (leerFiltroFechasGuardado() || !salidasCache.length) return;
+        const fechas = salidasCache.map((it) => fechaLocalDesdeDate(it.d)).sort();
+        filtroDesdeEl.value = fechas[0];
+        filtroHastaEl.value = fechas[fechas.length - 1];
+    }
+
+    async function cargarDesdeGoogle() {
+        if (cargando) return;
+        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.cargarDatosSemana !== 'function') {
+            headerText.textContent = 'Salidas de predicación';
+            mensajeVacio('No se pudo cargar el módulo de datos.', true);
+            return;
+        }
+        cargando = true;
+        btnActualizar.disabled = true;
+        if (!salidasCache.length) mensajeVacio('Cargando salidas…');
+        try {
+            const json = await window.TerritoriosGoogle.cargarDatosSemana();
+            const bundle = normalizarBundle(json);
+            aplicarBundle(bundle);
+            mostrarSemanaPublicadaSiNoHayFiltro();
+            if (!salidasCache.length) {
+                headerText.textContent = 'Salidas de predicación';
+                mensajeVacio('No hay salidas publicadas.');
+                return;
+            }
+            renderFiltrado();
+        } catch (e) {
+            const msg = (e && e.message) ? e.message : String(e);
+            if (!salidasCache.length) {
+                headerText.textContent = 'Salidas de predicación';
+                mensajeVacio('No se pudieron cargar las salidas. ' + msg, true);
+            }
+        } finally {
+            cargando = false;
+            btnActualizar.disabled = false;
+        }
+    }
+
+    btnActualizar.addEventListener('click', () => { cargarDesdeGoogle(); });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') cargarDesdeGoogle();
+    });
+    window.addEventListener('resize', escalaMovil);
+    window.addEventListener('orientationchange', () => { setTimeout(escalaMovil, 150); });
+
+    inicializarFiltroFechas();
+    escalaMovil();
+    cargarDesdeGoogle();
+</script>
+</body>
+</html>
