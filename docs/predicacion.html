@@ -358,42 +358,6 @@
         .modal-map-msg[hidden] { display: none !important; }
         .modal-map-msg.error { color: #b00020; }
 
-        .modal-foot {
-            display: flex;
-            gap: 8px;
-            padding: 10px 12px;
-            border-top: 1px solid #e6ebf0;
-        }
-
-        .modal-btn,
-        .modal-link {
-            flex: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 40px;
-            border-radius: 8px;
-            border: none;
-            background: var(--primary);
-            color: #fff;
-            text-decoration: none;
-            font-family: inherit;
-            font-size: 0.82rem;
-            font-weight: 800;
-            text-align: center;
-            padding: 8px 10px;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-
-        .modal-btn-secondary { background: #eceff1; color: #263238; }
-
-        .modal-btn:disabled,
-        .modal-link[aria-disabled="true"] {
-            pointer-events: none;
-            opacity: 0.45;
-        }
-
         .alert-box {
             margin-left: calc(3.35rem + 6px);
             padding: 3px 7px;
@@ -438,10 +402,6 @@
         <div class="modal-map-wrap" id="mm-map-wrap">
             <div class="modal-map-msg" id="mm-msg">Cargando mapa…</div>
         </div>
-        <div class="modal-foot">
-            <button type="button" class="modal-btn modal-btn-secondary" id="mm-ubicacion">Mi GPS en My Maps</button>
-            <a class="modal-link" id="mm-abrir" href="#" target="_blank" rel="noopener noreferrer">Abrir My Maps</a>
-        </div>
     </div>
 </div>
 
@@ -454,8 +414,6 @@
     const mmSubtitle = document.getElementById('mm-subtitle');
     const mmMapWrap = document.getElementById('mm-map-wrap');
     const mmMsg = document.getElementById('mm-msg');
-    const mmAbrir = document.getElementById('mm-abrir');
-    const mmUbicacionBtn = document.getElementById('mm-ubicacion');
     const MY_MAPS_MID = '1fQJSpbw8ChDWK6m8mu64a7ts-Ra0Kqc';
     const FALLBACK_DESCRIPCIONES_PUEBLO = {
         '200': 'Cadret',
@@ -474,9 +432,6 @@
     let cargando = false;
     let mapaMetaCache = null;
     let mapaMetaPromise = null;
-    let mmTerrGps = null;
-    let mmTerrZoom = 17;
-
     function esTerritorioPueblo(t) {
         const n = parseInt(t, 10);
         return !isNaN(n) && n >= 200;
@@ -627,16 +582,13 @@
         return null;
     }
 
-    function urlMyMaps(lat, lon, zoom, embed) {
-        const base = embed
-            ? 'https://www.google.com/maps/d/embed'
-            : 'https://www.google.com/maps/d/viewer';
+    function urlMyMapsEmbed(lat, lon, zoom) {
         const q = new URLSearchParams({
             mid: MY_MAPS_MID,
             ll: `${lat},${lon}`,
             z: String(zoom || 17)
         });
-        return `${base}?${q.toString()}`;
+        return `https://www.google.com/maps/d/embed?${q.toString()}`;
     }
 
     function tituloTerritorioModal(numero) {
@@ -664,7 +616,6 @@
             iframe.title = 'Mapa del territorio';
             iframe.loading = 'lazy';
             iframe.referrerPolicy = 'no-referrer-when-downgrade';
-            iframe.allow = 'geolocation; fullscreen; accelerometer';
             iframe.allowFullscreen = true;
             mmMapWrap.appendChild(iframe);
         }
@@ -672,54 +623,8 @@
     }
 
     function centrarMyMapsEn(lat, lon, zoom, subtitulo) {
-        pintarIframeMapa(urlMyMaps(lat, lon, zoom, true));
-        mmAbrir.href = urlMyMaps(lat, lon, zoom, false);
-        mmAbrir.removeAttribute('aria-disabled');
+        pintarIframeMapa(urlMyMapsEmbed(lat, lon, zoom));
         if (subtitulo) mmSubtitle.textContent = subtitulo;
-    }
-
-    function abrirMyMapsConGps(lat, lon, zoom) {
-        // El embed web no puede mostrar el punto GPS azul.
-        // En Google Maps (app/web) sí: My Maps + tu ubicación, como en tu captura.
-        const url = urlMyMaps(lat, lon, zoom || 17, false);
-        mmAbrir.href = url;
-        mmAbrir.removeAttribute('aria-disabled');
-        const win = window.open(url, '_blank', 'noopener,noreferrer');
-        if (!win) {
-            // Si el navegador bloquea la ventana, forzá la navegación del enlace.
-            mmAbrir.click();
-        }
-    }
-
-    function mostrarMiUbicacion() {
-        const fallbackLat = mmTerrGps ? mmTerrGps.lat : -35.623;
-        const fallbackLon = mmTerrGps ? mmTerrGps.lon : -61.365;
-        const zoom = mmTerrZoom || 17;
-
-        mmSubtitle.textContent = 'Abriendo My Maps en Google Maps… ahí se ve tu punto GPS';
-
-        const abrir = (lat, lon) => {
-            abrirMyMapsConGps(lat, lon, zoom);
-            mmSubtitle.textContent = 'En Google Maps vas a ver My Maps con tu punto azul';
-        };
-
-        if (!navigator.geolocation || !window.isSecureContext) {
-            abrir(fallbackLat, fallbackLon);
-            return;
-        }
-
-        mmUbicacionBtn.disabled = true;
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                mmUbicacionBtn.disabled = false;
-                abrir(pos.coords.latitude, pos.coords.longitude);
-            },
-            () => {
-                mmUbicacionBtn.disabled = false;
-                abrir(fallbackLat, fallbackLon);
-            },
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-        );
     }
 
     function cerrarModalMapa() {
@@ -727,21 +632,14 @@
         mapaModal.setAttribute('aria-hidden', 'true');
         const iframe = mmMapWrap.querySelector('iframe');
         if (iframe) iframe.src = 'about:blank';
-        mmTerrGps = null;
         mmSubtitle.textContent = 'Ubicación en el mapa';
-        mmUbicacionBtn.disabled = false;
     }
 
     async function abrirModalMapa(numero) {
         const num = String(numero ?? '').trim();
         if (!num) return;
         mmTitle.textContent = tituloTerritorioModal(num);
-        mmTitle.dataset.numero = num;
-        mmSubtitle.textContent = 'My Maps · para tu punto GPS usá el botón de abajo';
-        mmAbrir.href = '#';
-        mmAbrir.setAttribute('aria-disabled', 'true');
-        mmUbicacionBtn.disabled = false;
-        mmTerrGps = null;
+        mmSubtitle.textContent = 'Mapa de Carlos Casares';
         mostrarMsgMapa('Cargando mapa…', false);
         mapaModal.classList.add('open');
         mapaModal.setAttribute('aria-hidden', 'false');
@@ -749,20 +647,11 @@
             const meta = await obtenerMapaMeta();
             const gps = gpsDeTerritorio(meta, num);
             if (!gps) {
-                const fallback = urlMyMaps(-35.623, -61.365, 13, false);
-                mmAbrir.href = fallback;
-                mmAbrir.removeAttribute('aria-disabled');
-                mostrarMsgMapa('No hay coordenadas para este territorio. Podés abrir el mapa completo.', true);
+                mostrarMsgMapa('No hay coordenadas para este territorio.', true);
                 return;
             }
-            mmTerrGps = gps;
-            mmTerrZoom = esTerritorioPueblo(num) ? 14 : 17;
-            centrarMyMapsEn(
-                gps.lat,
-                gps.lon,
-                mmTerrZoom,
-                'My Maps · para tu punto GPS usá “Mi GPS en My Maps”'
-            );
+            const zoom = esTerritorioPueblo(num) ? 14 : 17;
+            centrarMyMapsEn(gps.lat, gps.lon, zoom, 'Mapa de Carlos Casares');
         } catch (e) {
             const msg = (e && e.message) ? e.message : String(e);
             mostrarMsgMapa('No se pudo cargar el mapa. ' + msg, true);
@@ -907,7 +796,6 @@
     }
 
     document.getElementById('mm-cerrar').addEventListener('click', cerrarModalMapa);
-    mmUbicacionBtn.addEventListener('click', mostrarMiUbicacion);
     mapaModal.addEventListener('click', (ev) => {
         if (ev.target === mapaModal) cerrarModalMapa();
     });
