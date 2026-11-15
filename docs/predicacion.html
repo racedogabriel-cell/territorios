@@ -9,7 +9,6 @@
     <meta name="apple-mobile-web-app-title" content="Salidas" />
     <title>Salidas de predicación</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -327,14 +326,17 @@
             min-height: 58dvh;
             background: #dfe6ee;
             overflow: hidden;
-            touch-action: none;
         }
 
-        #mm-leaflet {
+        /* Google My Maps no permite ocultar su encabezado: se recorta arriba. */
+        .modal-map-wrap iframe {
+            display: block;
             width: 100%;
-            height: 100%;
-            min-height: 58dvh;
-            z-index: 1;
+            height: calc(100% + 96px);
+            min-height: calc(58dvh + 96px);
+            border: 0;
+            margin-top: -96px;
+            touch-action: pan-x pan-y pinch-zoom;
         }
 
         .modal-map-msg {
@@ -392,37 +394,6 @@
             opacity: 0.45;
         }
 
-        .mm-terr-icon { background: transparent; border: 0; }
-        .mm-terr-pill {
-            min-width: 2rem;
-            padding: 4px 8px;
-            border-radius: 6px;
-            background: var(--primary);
-            color: #fff;
-            font-size: 0.85rem;
-            font-weight: 900;
-            line-height: 1.1;
-            text-align: center;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-        }
-
-        .mm-user-wrap { background: transparent; border: 0; }
-        .mm-user-dot {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #1a73e8;
-            border: 2px solid #fff;
-            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.35), 0 1px 4px rgba(0, 0, 0, 0.35);
-        }
-
-        .leaflet-control-zoom a {
-            width: 34px !important;
-            height: 34px !important;
-            line-height: 34px !important;
-            font-size: 18px !important;
-        }
-
         .alert-box {
             margin-left: calc(3.35rem + 6px);
             padding: 3px 7px;
@@ -465,7 +436,6 @@
             <button type="button" class="modal-close" id="mm-cerrar">Cerrar</button>
         </div>
         <div class="modal-map-wrap" id="mm-map-wrap">
-            <div id="mm-leaflet"></div>
             <div class="modal-map-msg" id="mm-msg">Cargando mapa…</div>
         </div>
         <div class="modal-foot">
@@ -475,7 +445,6 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="google.js"></script>
 <script>
     const root = document.getElementById('root');
@@ -484,7 +453,6 @@
     const mmTitle = document.getElementById('mm-title');
     const mmSubtitle = document.getElementById('mm-subtitle');
     const mmMapWrap = document.getElementById('mm-map-wrap');
-    const mmLeafletEl = document.getElementById('mm-leaflet');
     const mmMsg = document.getElementById('mm-msg');
     const mmAbrir = document.getElementById('mm-abrir');
     const mmUbicacionBtn = document.getElementById('mm-ubicacion');
@@ -506,12 +474,8 @@
     let cargando = false;
     let mapaMetaCache = null;
     let mapaMetaPromise = null;
-    let mmMapa = null;
-    let mmTerrLayer = null;
-    let mmUserLayer = null;
-    let mmWatchId = null;
     let mmTerrGps = null;
-    let mmUserGps = null;
+    let mmTerrZoom = 17;
 
     function esTerritorioPueblo(t) {
         const n = parseInt(t, 10);
@@ -663,13 +627,16 @@
         return null;
     }
 
-    function urlMyMaps(lat, lon, zoom) {
+    function urlMyMaps(lat, lon, zoom, embed) {
+        const base = embed
+            ? 'https://www.google.com/maps/d/embed'
+            : 'https://www.google.com/maps/d/viewer';
         const q = new URLSearchParams({
             mid: MY_MAPS_MID,
             ll: `${lat},${lon}`,
             z: String(zoom || 17)
         });
-        return `https://www.google.com/maps/d/viewer?${q.toString()}`;
+        return `${base}?${q.toString()}`;
     }
 
     function tituloTerritorioModal(numero) {
@@ -682,128 +649,26 @@
     }
 
     function mostrarMsgMapa(texto, esError) {
+        const iframe = mmMapWrap.querySelector('iframe');
+        if (iframe) iframe.remove();
         mmMsg.className = 'modal-map-msg' + (esError ? ' error' : '');
         mmMsg.textContent = texto;
         mmMsg.hidden = false;
     }
 
-    function ocultarMsgMapa() {
+    function pintarIframeMapa(src) {
         mmMsg.hidden = true;
-    }
-
-    function iconoTerritorio(numero) {
-        return L.divIcon({
-            className: 'mm-terr-icon',
-            html: `<div class="mm-terr-pill">${escapeHtml(numero)}</div>`,
-            iconSize: [36, 28],
-            iconAnchor: [18, 14]
-        });
-    }
-
-    function iconoUsuario() {
-        return L.divIcon({
-            className: 'mm-user-wrap',
-            html: '<div class="mm-user-dot"></div>',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
-    }
-
-    function detenerUbicacion() {
-        if (mmWatchId != null && navigator.geolocation) {
-            navigator.geolocation.clearWatch(mmWatchId);
+        let iframe = mmMapWrap.querySelector('iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.title = 'Mapa del territorio';
+            iframe.loading = 'lazy';
+            iframe.referrerPolicy = 'no-referrer-when-downgrade';
+            iframe.allow = 'geolocation; fullscreen; accelerometer';
+            iframe.allowFullscreen = true;
+            mmMapWrap.appendChild(iframe);
         }
-        mmWatchId = null;
-    }
-
-    function limpiarMapaLeaflet() {
-        detenerUbicacion();
-        mmUserGps = null;
-        mmTerrGps = null;
-        if (mmTerrLayer && mmMapa) {
-            try { mmMapa.removeLayer(mmTerrLayer); } catch (_) {}
-        }
-        if (mmUserLayer && mmMapa) {
-            try { mmMapa.removeLayer(mmUserLayer); } catch (_) {}
-        }
-        mmTerrLayer = null;
-        mmUserLayer = null;
-    }
-
-    function asegurarMapaLeaflet() {
-        if (typeof L === 'undefined') throw new Error('Leaflet no cargó.');
-        if (mmMapa) return mmMapa;
-        mmMapa = L.map(mmLeafletEl, {
-            zoomControl: true,
-            attributionControl: false,
-            scrollWheelZoom: true,
-            dragging: true,
-            touchZoom: true,
-            doubleClickZoom: true,
-            boxZoom: true,
-            tap: true
-        });
-        L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=es&x={x}&y={y}&z={z}', {
-            subdomains: '0123',
-            maxZoom: 21,
-            maxNativeZoom: 20
-        }).addTo(mmMapa);
-        return mmMapa;
-    }
-
-    function ajustarVistaMapa() {
-        if (!mmMapa) return;
-        const pts = [];
-        if (mmTerrGps) pts.push([mmTerrGps.lat, mmTerrGps.lon]);
-        if (mmUserGps) pts.push([mmUserGps.lat, mmUserGps.lon]);
-        if (!pts.length) return;
-        if (pts.length === 1) {
-            mmMapa.setView(pts[0], esTerritorioPueblo(mmTitle.dataset.numero) ? 14 : 17, { animate: true });
-            return;
-        }
-        mmMapa.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 17, animate: true });
-    }
-
-    function pintarTerritorioEnMapa(numero, gps) {
-        if (mmTerrLayer) {
-            try { mmMapa.removeLayer(mmTerrLayer); } catch (_) {}
-        }
-        mmTerrLayer = L.layerGroup().addTo(mmMapa);
-        L.circle([gps.lat, gps.lon], {
-            radius: esTerritorioPueblo(numero) ? 180 : 70,
-            color: '#2c3e50',
-            weight: 2,
-            fillColor: '#2c3e50',
-            fillOpacity: 0.18
-        }).addTo(mmTerrLayer);
-        L.marker([gps.lat, gps.lon], {
-            icon: iconoTerritorio(numero),
-            keyboard: false
-        }).addTo(mmTerrLayer);
-    }
-
-    function pintarUbicacionUsuario(lat, lon, accuracy) {
-        if (!mmMapa) return;
-        mmUserGps = { lat, lon };
-        if (mmUserLayer) {
-            try { mmMapa.removeLayer(mmUserLayer); } catch (_) {}
-        }
-        mmUserLayer = L.layerGroup().addTo(mmMapa);
-        const acc = Number.isFinite(accuracy) ? Math.max(20, Math.min(accuracy, 250)) : 40;
-        L.circle([lat, lon], {
-            radius: acc,
-            color: '#1a73e8',
-            weight: 1,
-            fillColor: '#1a73e8',
-            fillOpacity: 0.12,
-            interactive: false
-        }).addTo(mmUserLayer);
-        L.marker([lat, lon], {
-            icon: iconoUsuario(),
-            interactive: false,
-            keyboard: false
-        }).addTo(mmUserLayer);
-        ajustarVistaMapa();
+        iframe.src = src;
     }
 
     function mensajeErrorGeo(err) {
@@ -814,40 +679,44 @@
         return 'No se pudo obtener la ubicación.';
     }
 
-    function seguirUbicacionUsuario(centrar) {
+    function centrarMyMapsEn(lat, lon, zoom, subtitulo) {
+        pintarIframeMapa(urlMyMaps(lat, lon, zoom, true));
+        mmAbrir.href = urlMyMaps(lat, lon, zoom, false);
+        mmAbrir.removeAttribute('aria-disabled');
+        if (subtitulo) mmSubtitle.textContent = subtitulo;
+    }
+
+    function mostrarMiUbicacion() {
         if (!navigator.geolocation) {
             mmSubtitle.textContent = 'Este dispositivo no tiene geolocalización.';
             return;
         }
         mmUbicacionBtn.disabled = true;
         mmSubtitle.textContent = 'Buscando tu ubicación…';
-        detenerUbicacion();
-        const opts = { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 };
-        let first = true;
-        mmWatchId = navigator.geolocation.watchPosition(
+        navigator.geolocation.getCurrentPosition(
             (pos) => {
                 mmUbicacionBtn.disabled = false;
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                pintarUbicacionUsuario(lat, lon, pos.coords.accuracy);
-                if (first || centrar) {
-                    first = false;
-                    centrar = false;
-                    mmSubtitle.textContent = 'Territorio y tu ubicación';
-                }
+                centrarMyMapsEn(
+                    pos.coords.latitude,
+                    pos.coords.longitude,
+                    17,
+                    'Centrado en tu ubicación · mapa Carlos Casares'
+                );
             },
             (err) => {
                 mmUbicacionBtn.disabled = false;
                 mmSubtitle.textContent = mensajeErrorGeo(err);
             },
-            opts
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
         );
     }
 
     function cerrarModalMapa() {
         mapaModal.classList.remove('open');
         mapaModal.setAttribute('aria-hidden', 'true');
-        limpiarMapaLeaflet();
+        const iframe = mmMapWrap.querySelector('iframe');
+        if (iframe) iframe.src = 'about:blank';
+        mmTerrGps = null;
         mmSubtitle.textContent = 'Ubicación en el mapa';
         mmUbicacionBtn.disabled = false;
     }
@@ -857,11 +726,11 @@
         if (!num) return;
         mmTitle.textContent = tituloTerritorioModal(num);
         mmTitle.dataset.numero = num;
-        mmSubtitle.textContent = 'Podés acercar, alejar y mover el mapa';
+        mmSubtitle.textContent = 'Ubicación en el mapa de Carlos Casares';
         mmAbrir.href = '#';
         mmAbrir.setAttribute('aria-disabled', 'true');
         mmUbicacionBtn.disabled = false;
-        limpiarMapaLeaflet();
+        mmTerrGps = null;
         mostrarMsgMapa('Cargando mapa…', false);
         mapaModal.classList.add('open');
         mapaModal.setAttribute('aria-hidden', 'false');
@@ -869,24 +738,15 @@
             const meta = await obtenerMapaMeta();
             const gps = gpsDeTerritorio(meta, num);
             if (!gps) {
-                const fallback = urlMyMaps(-35.623, -61.365, 13);
+                const fallback = urlMyMaps(-35.623, -61.365, 13, false);
                 mmAbrir.href = fallback;
                 mmAbrir.removeAttribute('aria-disabled');
                 mostrarMsgMapa('No hay coordenadas para este territorio. Podés abrir el mapa completo.', true);
                 return;
             }
             mmTerrGps = gps;
-            const zoom = esTerritorioPueblo(num) ? 14 : 17;
-            mmAbrir.href = urlMyMaps(gps.lat, gps.lon, zoom);
-            mmAbrir.removeAttribute('aria-disabled');
-            asegurarMapaLeaflet();
-            ocultarMsgMapa();
-            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-            mmMapa.invalidateSize(true);
-            pintarTerritorioEnMapa(num, gps);
-            mmMapa.setView([gps.lat, gps.lon], zoom, { animate: false });
-            mmMapa.invalidateSize(true);
-            seguirUbicacionUsuario(false);
+            mmTerrZoom = esTerritorioPueblo(num) ? 14 : 17;
+            centrarMyMapsEn(gps.lat, gps.lon, mmTerrZoom, 'Ubicación en el mapa de Carlos Casares');
         } catch (e) {
             const msg = (e && e.message) ? e.message : String(e);
             mostrarMsgMapa('No se pudo cargar el mapa. ' + msg, true);
@@ -1031,7 +891,7 @@
     }
 
     document.getElementById('mm-cerrar').addEventListener('click', cerrarModalMapa);
-    mmUbicacionBtn.addEventListener('click', () => seguirUbicacionUsuario(true));
+    mmUbicacionBtn.addEventListener('click', mostrarMiUbicacion);
     mapaModal.addEventListener('click', (ev) => {
         if (ev.target === mapaModal) cerrarModalMapa();
     });
