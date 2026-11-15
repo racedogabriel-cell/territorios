@@ -325,14 +325,17 @@
             flex: 1;
             min-height: 58dvh;
             background: #dfe6ee;
+            overflow: hidden;
         }
 
+        /* Google My Maps no permite ocultar su encabezado: se recorta arriba. */
         .modal-map-wrap iframe {
             display: block;
             width: 100%;
-            height: 100%;
-            min-height: 58dvh;
+            height: calc(100% + 96px);
+            min-height: calc(58dvh + 96px);
             border: 0;
+            margin-top: -96px;
         }
 
         .modal-map-msg {
