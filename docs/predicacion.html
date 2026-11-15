@@ -17,7 +17,6 @@
             --accent-bg: #fdf5e6;
             --danger: #cc0000;
             --bg: #ffffff;
-            --k: 0.72;
             --group-1-bg: #d9e7ff;
             --group-1-fg: #034cbc;
             --group-1-accent: #0062ff;
@@ -55,53 +54,53 @@
         .header {
             background: var(--primary);
             color: white;
-            padding: calc(10px * var(--k) + env(safe-area-inset-top)) 12px calc(10px * var(--k));
+            padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
             text-align: center;
-            border-bottom: calc(5px * var(--k)) solid var(--accent);
+            border-bottom: 4px solid var(--accent);
         }
 
         .header h1 {
-            font-size: calc(32px * var(--k));
+            font-size: clamp(0.95rem, 4.2vw, 1.15rem);
             font-weight: 900;
             text-transform: uppercase;
-            line-height: 1.15;
+            line-height: 1.2;
+            letter-spacing: 0.02em;
         }
 
         .day-block {
             display: flex;
-            border-bottom: calc(4px * var(--k)) solid #ccc;
-            min-height: calc(92px * var(--k));
+            border-bottom: 3px solid #ccc;
         }
 
         .day-sidebar {
             background: var(--primary-bg);
             color: var(--primary);
-            width: calc(65px * var(--k));
+            width: 2.35rem;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: calc(8px * var(--k));
+            justify-content: flex-start;
+            gap: 1px;
             flex-shrink: 0;
             border-right: 1px solid #ccc;
-            padding: calc(8px * var(--k)) 0;
+            padding: 8px 2px 6px;
         }
 
         .day-sidebar.weekend { background: var(--accent-bg); color: var(--accent); }
 
-        .day-name,
         .day-num {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
+            font-size: 1.05rem;
             font-weight: 900;
-            text-align: center;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
         }
 
-        .day-num { font-size: calc(30px * var(--k)); }
-
         .day-name {
-            font-size: calc(24px * var(--k));
+            font-size: 0.62rem;
+            font-weight: 900;
             text-transform: uppercase;
+            letter-spacing: 0.04em;
+            line-height: 1.1;
         }
 
         .meetings-container {
@@ -112,11 +111,11 @@
         }
 
         .meeting {
-            padding: calc(8px * var(--k)) calc(12px * var(--k));
+            padding: 7px 8px 8px;
             border-bottom: 1px solid #eee;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            gap: 4px;
         }
 
         .meeting:last-child { border-bottom: none; }
@@ -127,39 +126,35 @@
         .meeting.meeting--pueblo:nth-child(even) { background-color: #f3e8dc; }
 
         .row-main {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: calc(6px * var(--k)) calc(10px * var(--k));
+            display: grid;
+            grid-template-columns: 3.35rem minmax(0, 1fr);
+            column-gap: 6px;
+            align-items: start;
             width: 100%;
         }
 
         .time {
-            font-size: calc(55px * var(--k));
+            font-size: 1.15rem;
             font-weight: 900;
             color: #000;
-            line-height: 1;
-            flex-shrink: 0;
-            display: inline-block;
+            line-height: 1.15;
             white-space: nowrap;
-            transform: scaleX(0.8);
-            transform-origin: left center;
+            font-variant-numeric: tabular-nums;
+            padding-top: 1px;
         }
 
         .info-group {
-            flex: 1 1 8rem;
             min-width: 0;
-            display: block;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
         }
 
         .place {
-            font-size: calc(34px * var(--k));
+            font-size: 0.92rem;
             font-weight: 800;
             color: #1a1a1a;
-            line-height: 1.1;
-            display: block;
-            margin-bottom: 2px;
+            line-height: 1.18;
             overflow-wrap: anywhere;
         }
 
@@ -168,21 +163,34 @@
         .place--group-3 { color: var(--group-3-fg); }
         .place--group-default { color: var(--group-default-fg); }
 
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 6px;
+        }
+
         .sub-info {
-            font-size: calc(18px * var(--k));
+            font-size: 0.72rem;
             font-weight: 700;
             color: #555;
             line-height: 1.25;
-            display: block;
-            overflow-wrap: anywhere;
+            min-width: 0;
+            flex: 1 1 auto;
         }
 
         .group-pill {
-            display: inline-block;
-            padding: calc(2px * var(--k)) calc(8px * var(--k));
-            border-radius: calc(6px * var(--k));
-            line-height: 1.2;
-            border-left: calc(4px * var(--k)) solid transparent;
+            display: inline-flex;
+            align-items: baseline;
+            flex-wrap: nowrap;
+            gap: 0 4px;
+            max-width: 100%;
+            min-width: 0;
+            padding: 1px 6px;
+            border-radius: 5px;
+            line-height: 1.25;
+            border-left: 3px solid transparent;
+            overflow: hidden;
         }
 
         .group-pill--1 { background: var(--group-1-bg); border-left-color: var(--group-1-accent); }
@@ -190,7 +198,11 @@
         .group-pill--3 { background: var(--group-3-bg); border-left-color: var(--group-3-accent); }
         .group-pill--default { background: var(--group-default-bg); }
 
-        .group-pill-label { font-weight: 900; text-transform: uppercase; }
+        .group-pill-label {
+            flex-shrink: 0;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
 
         .group-pill--1 .group-pill-label { color: var(--group-1-fg); }
         .group-pill--2 .group-pill-label { color: var(--group-2-fg); }
@@ -198,30 +210,32 @@
         .group-pill--default .group-pill-label { color: var(--group-default-fg); }
 
         .group-pill-resp {
+            min-width: 0;
             font-weight: 700;
             color: #555;
             text-transform: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .terr-badges {
             display: flex;
-            gap: 4px;
-            flex-shrink: 0;
+            gap: 3px;
             flex-wrap: wrap;
-            justify-content: flex-end;
+            align-items: center;
             margin-left: auto;
-            max-width: 100%;
         }
 
         .badge {
             background: var(--primary);
             color: #fff;
-            padding: calc(6px * var(--k)) calc(12px * var(--k));
-            border-radius: 6px;
-            font-size: calc(34px * var(--k));
+            padding: 3px 7px;
+            border-radius: 5px;
+            font-size: 0.88rem;
             font-weight: 900;
-            border: 4px solid transparent;
-            line-height: 1;
+            border: 2px solid transparent;
+            line-height: 1.15;
         }
 
         .badge.note { background: var(--accent); color: #fff; }
@@ -229,19 +243,19 @@
         .badge.badge-pueblo {
             background: #7b4f2e;
             color: #fff;
-            font-size: calc(26px * var(--k));
-            padding: calc(6px * var(--k)) calc(14px * var(--k));
-            letter-spacing: 0.02em;
+            font-size: 0.78rem;
+            padding: 3px 8px;
+            letter-spacing: 0.01em;
         }
 
         .alert-box {
-            padding: 4px 10px;
-            margin-top: 5px;
+            margin-left: calc(3.35rem + 6px);
+            padding: 3px 7px;
             border-radius: 4px;
-            font-size: calc(18px * var(--k));
-            font-weight: 400;
+            font-size: 0.7rem;
+            font-weight: 500;
             line-height: 1.25;
-            border-left: 4px solid;
+            border-left: 3px solid;
             overflow-wrap: anywhere;
         }
 
@@ -369,11 +383,18 @@
         return ['1', '2', '3'].includes(match[1]) ? match[1] : 'default';
     }
 
+    function etiquetaGrupoCorta(groupName) {
+        const variant = groupPillVariant(groupName);
+        if (variant !== 'default') return `G${variant}`;
+        const txt = String(groupName || '').trim();
+        return txt.replace(/^grupo\s+/i, 'G');
+    }
+
     function htmlGroupBlock(groupName, responsables) {
         const variant = groupPillVariant(groupName);
-        const label = `${escapeHtml(String(groupName).trim())}:`;
+        const label = escapeHtml(etiquetaGrupoCorta(groupName));
         const resps = escapeHtml(responsables);
-        return `<span class="group-pill group-pill--${variant}"><span class="group-pill-label">${label}</span> <span class="group-pill-resp">${resps}</span></span>`;
+        return `<span class="group-pill group-pill--${variant}"><span class="group-pill-label">${label}</span>${resps ? ` <span class="group-pill-resp">${resps}</span>` : ''}</span>`;
     }
 
     function htmlBadgeTerritorioSalida(it) {
@@ -442,24 +463,27 @@
                     return pa - pb;
                 });
 
-                const resps = [...new Set(m.items.map((i) => i.r))].join(' / ');
+                const resps = [...new Set(m.items.map((i) => i.r).filter(Boolean))].join(' / ');
                 const groupName = m.items[0].g;
                 const isCongregacional = !groupName || groupName.toLowerCase() === 'congregacional';
                 const placeCls = isCongregacional ? 'place' : `place place--group-${groupPillVariant(groupName)}`;
                 const tienePueblo = m.items.some((it) => esTerritorioPueblo(it.t));
                 const meetingCls = tienePueblo ? 'meeting meeting--pueblo' : 'meeting';
+                const metaHtml = !isCongregacional
+                    ? htmlGroupBlock(groupName, resps)
+                    : (resps ? `<span class="sub-info">${escapeHtml(resps)}</span>` : '');
 
                 html += `<div class="${meetingCls}">
                     <div class="row-main">
                         <div class="time">${escapeHtml(m.time)}</div>
                         <div class="info-group">
                             <span class="${placeCls}">${escapeHtml(m.place)}</span>
-                            <div class="sub-info">
-                                ${!isCongregacional ? htmlGroupBlock(groupName, resps) : escapeHtml(resps)}
+                            <div class="meta-row">
+                                ${metaHtml}
+                                <div class="terr-badges">
+                                    ${m.items.map((it) => htmlBadgeTerritorioSalida(it)).join('')}
+                                </div>
                             </div>
-                        </div>
-                        <div class="terr-badges">
-                            ${m.items.map((it) => htmlBadgeTerritorioSalida(it)).join('')}
                         </div>
                     </div>
                     ${m.items.some((i) => i.m) ? `
@@ -477,24 +501,6 @@
             html += '</div></div>';
         });
         root.innerHTML = html;
-        requestAnimationFrame(ajustarAnchoHorarios);
-    }
-
-    function ajustarAnchoHorarios() {
-        root.querySelectorAll('.time').forEach((el) => {
-            el.style.marginRight = '0';
-            el.style.marginRight = `${-(el.offsetWidth * 0.2)}px`;
-        });
-    }
-
-    function escalaMovil() {
-        const lienzo = document.getElementById('capture');
-        const ancho = (lienzo && lienzo.clientWidth) || window.innerWidth;
-        let k = ancho / 540;
-        if (k < 0.52) k = 0.52;
-        if (k > 0.88) k = 0.88;
-        document.documentElement.style.setProperty('--k', String(Math.round(k * 1000) / 1000));
-        ajustarAnchoHorarios();
     }
 
     function aplicarBundle(bundle) {
@@ -537,10 +543,7 @@
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') cargarDesdeGoogle();
     });
-    window.addEventListener('resize', escalaMovil);
-    window.addEventListener('orientationchange', () => { setTimeout(escalaMovil, 150); });
 
-    escalaMovil();
     cargarDesdeGoogle();
 </script>
 </body>
