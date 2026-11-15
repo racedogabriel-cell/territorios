@@ -673,9 +673,9 @@
 
     function mensajeErrorGeo(err) {
         if (!err) return 'No se pudo obtener la ubicación.';
-        if (err.code === 1) return 'Activá el permiso de ubicación para ver dónde estás.';
-        if (err.code === 2) return 'No se pudo determinar tu ubicación.';
-        if (err.code === 3) return 'Se agotó el tiempo buscando tu ubicación.';
+        if (err.code === 1) return 'Activá el permiso de ubicación para este sitio y reintentá.';
+        if (err.code === 2) return 'No se pudo determinar tu ubicación. Revisá que el GPS esté activo.';
+        if (err.code === 3) return 'No llegó la ubicación a tiempo. Salí un momento al aire libre y reintentá.';
         return 'No se pudo obtener la ubicación.';
     }
 
@@ -686,29 +686,52 @@
         if (subtitulo) mmSubtitle.textContent = subtitulo;
     }
 
-    function mostrarMiUbicacion() {
+    function pedirPosicion(opts) {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, opts);
+        });
+    }
+
+    async function mostrarMiUbicacion() {
+        if (!window.isSecureContext) {
+            mmSubtitle.textContent = 'La ubicación solo funciona en HTTPS.';
+            return;
+        }
         if (!navigator.geolocation) {
             mmSubtitle.textContent = 'Este dispositivo no tiene geolocalización.';
             return;
         }
         mmUbicacionBtn.disabled = true;
         mmSubtitle.textContent = 'Buscando tu ubicación…';
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                mmUbicacionBtn.disabled = false;
-                centrarMyMapsEn(
-                    pos.coords.latitude,
-                    pos.coords.longitude,
-                    17,
-                    'Centrado en tu ubicación · mapa Carlos Casares'
-                );
-            },
-            (err) => {
-                mmUbicacionBtn.disabled = false;
-                mmSubtitle.textContent = mensajeErrorGeo(err);
-            },
-            { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
-        );
+        try {
+            let pos = null;
+            // Primero rápido (red/Wi‑Fi). Si falla, reintenta con GPS.
+            try {
+                pos = await pedirPosicion({
+                    enableHighAccuracy: false,
+                    timeout: 20000,
+                    maximumAge: 120000
+                });
+            } catch (errRapido) {
+                if (errRapido && errRapido.code === 1) throw errRapido;
+                mmSubtitle.textContent = 'Buscando con GPS…';
+                pos = await pedirPosicion({
+                    enableHighAccuracy: true,
+                    timeout: 35000,
+                    maximumAge: 15000
+                });
+            }
+            centrarMyMapsEn(
+                pos.coords.latitude,
+                pos.coords.longitude,
+                17,
+                'Centrado en tu ubicación · mapa Carlos Casares'
+            );
+        } catch (err) {
+            mmSubtitle.textContent = mensajeErrorGeo(err);
+        } finally {
+            mmUbicacionBtn.disabled = false;
+        }
     }
 
     function cerrarModalMapa() {
