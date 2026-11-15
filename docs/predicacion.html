@@ -42,74 +42,6 @@
             padding-bottom: max(12px, env(safe-area-inset-bottom));
         }
 
-        .controls {
-            width: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-            padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
-            background: #1a1a1a;
-        }
-
-        .vista-nota {
-            width: 100%;
-            text-align: center;
-            color: #c8c8c8;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-        }
-
-        .date-range-control {
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
-            align-items: center;
-            gap: 6px 8px;
-            width: min(100%, 340px);
-            background: #fff;
-            padding: 8px 10px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            font-weight: 800;
-            font-size: 13px;
-            color: #111;
-        }
-
-        .date-range-control label { white-space: nowrap; }
-
-        .date-range-control input[type="date"] {
-            width: 100%;
-            min-width: 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            padding: 6px 8px;
-            font-family: inherit;
-            font-size: 16px;
-            font-weight: 700;
-            min-height: 36px;
-            background: #fff;
-            color: #111;
-        }
-
-        .btn {
-            padding: 10px 16px;
-            min-height: 40px;
-            font-size: 14px;
-            font-weight: 800;
-            cursor: pointer;
-            border: none;
-            border-radius: 10px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            touch-action: manipulation;
-        }
-
-        .btn:disabled { opacity: 0.65; cursor: default; }
-
-        .btn-upload { background: #eee; color: #000; }
-
         .canvas {
             width: 100%;
             max-width: 720px;
@@ -123,7 +55,7 @@
         .header {
             background: var(--primary);
             color: white;
-            padding: calc(10px * var(--k)) 12px;
+            padding: calc(10px * var(--k) + env(safe-area-inset-top)) 12px calc(10px * var(--k));
             text-align: center;
             border-bottom: calc(5px * var(--k)) solid var(--accent);
         }
@@ -329,17 +261,6 @@
 </head>
 <body>
 
-<div class="controls">
-    <div class="vista-nota">Solo consulta</div>
-    <button class="btn btn-upload" id="btn-actualizar" type="button">Actualizar</button>
-    <div class="date-range-control">
-        <label for="filtro-desde">Desde</label>
-        <input type="date" id="filtro-desde" />
-        <label for="filtro-hasta">Hasta</label>
-        <input type="date" id="filtro-hasta" />
-    </div>
-</div>
-
 <div class="canvas" id="capture">
     <div class="header"><h1 id="header-text">Salidas de predicación</h1></div>
     <div id="root"></div>
@@ -349,10 +270,6 @@
 <script>
     const root = document.getElementById('root');
     const headerText = document.getElementById('header-text');
-    const btnActualizar = document.getElementById('btn-actualizar');
-    const filtroDesdeEl = document.getElementById('filtro-desde');
-    const filtroHastaEl = document.getElementById('filtro-hasta');
-    const FILTRO_FECHAS_KEY = 'predicacion.vista.filtroFechas';
     const FALLBACK_DESCRIPCIONES_PUEBLO = {
         '200': 'Cadret',
         '201': 'Algarrobo',
@@ -368,79 +285,6 @@
     let catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO);
     const descripcionPorNumeroMemo = {};
     let cargando = false;
-
-    function fechaLocalDesdeDate(d) {
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    }
-
-    function sumarDiasLocal(d, dias) {
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias);
-    }
-
-    function defaultsFiltroFechas() {
-        const hoy = new Date();
-        return {
-            desde: fechaLocalDesdeDate(hoy),
-            hasta: fechaLocalDesdeDate(sumarDiasLocal(hoy, 6))
-        };
-    }
-
-    function leerFiltroFechasGuardado() {
-        try {
-            const raw = localStorage.getItem(FILTRO_FECHAS_KEY);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (!parsed || !parsed.desde || !parsed.hasta) return null;
-            return { desde: String(parsed.desde), hasta: String(parsed.hasta) };
-        } catch (_) {
-            return null;
-        }
-    }
-
-    function guardarFiltroFechas() {
-        localStorage.setItem(FILTRO_FECHAS_KEY, JSON.stringify({
-            desde: filtroDesdeEl.value || '',
-            hasta: filtroHastaEl.value || ''
-        }));
-    }
-
-    function onFiltroFechasChange() {
-        if (filtroDesdeEl.value && filtroHastaEl.value && filtroDesdeEl.value > filtroHastaEl.value) {
-            if (document.activeElement === filtroDesdeEl) filtroHastaEl.value = filtroDesdeEl.value;
-            else filtroDesdeEl.value = filtroHastaEl.value;
-        }
-        guardarFiltroFechas();
-        renderFiltrado();
-    }
-
-    function inicializarFiltroFechas() {
-        const def = defaultsFiltroFechas();
-        const saved = leerFiltroFechasGuardado();
-        filtroDesdeEl.value = (saved && saved.desde) || def.desde;
-        filtroHastaEl.value = (saved && saved.hasta) || def.hasta;
-        if (filtroDesdeEl.value && filtroHastaEl.value && filtroDesdeEl.value > filtroHastaEl.value) {
-            filtroHastaEl.value = filtroDesdeEl.value;
-        }
-        filtroDesdeEl.addEventListener('change', onFiltroFechasChange);
-        filtroHastaEl.addEventListener('change', onFiltroFechasChange);
-    }
-
-    function filtrarSalidasPorRango(data) {
-        const desde = filtroDesdeEl.value || '';
-        const hasta = filtroHastaEl.value || '';
-        if (!desde && !hasta) return data;
-        return data.filter((it) => {
-            const key = fechaLocalDesdeDate(it.d);
-            if (desde && key < desde) return false;
-            if (hasta && key > hasta) return false;
-            return true;
-        });
-    }
-
-    function renderFiltrado() {
-        render(filtrarSalidasPorRango(salidasCache));
-    }
 
     function esTerritorioPueblo(t) {
         const n = parseInt(t, 10);
@@ -555,14 +399,14 @@
     }
 
     function render(data) {
-        const desdeTxt = fmtDiaMes(filtroDesdeEl.value) || (data[0] ? fmtDiaMes(data[0].d) : '');
-        const hastaTxt = fmtDiaMes(filtroHastaEl.value) || (data.length ? fmtDiaMes(data[data.length - 1].d) : '');
+        const desdeTxt = data[0] ? fmtDiaMes(data[0].d) : '';
+        const hastaTxt = data.length ? fmtDiaMes(data[data.length - 1].d) : '';
         headerText.textContent = (desdeTxt && hastaTxt)
             ? `Salidas de predicación • ${desdeTxt} al ${hastaTxt}`
             : 'Salidas de predicación';
 
         if (!data.length) {
-            mensajeVacio('No hay salidas en el rango seleccionado.');
+            mensajeVacio('No hay salidas publicadas.');
             return;
         }
 
@@ -665,13 +509,6 @@
         }
     }
 
-    function mostrarSemanaPublicadaSiNoHayFiltro() {
-        if (leerFiltroFechasGuardado() || !salidasCache.length) return;
-        const fechas = salidasCache.map((it) => fechaLocalDesdeDate(it.d)).sort();
-        filtroDesdeEl.value = fechas[0];
-        filtroHastaEl.value = fechas[fechas.length - 1];
-    }
-
     async function cargarDesdeGoogle() {
         if (cargando) return;
         if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.cargarDatosSemana !== 'function') {
@@ -680,19 +517,12 @@
             return;
         }
         cargando = true;
-        btnActualizar.disabled = true;
         if (!salidasCache.length) mensajeVacio('Cargando salidas…');
         try {
             const json = await window.TerritoriosGoogle.cargarDatosSemana();
             const bundle = normalizarBundle(json);
             aplicarBundle(bundle);
-            mostrarSemanaPublicadaSiNoHayFiltro();
-            if (!salidasCache.length) {
-                headerText.textContent = 'Salidas de predicación';
-                mensajeVacio('No hay salidas publicadas.');
-                return;
-            }
-            renderFiltrado();
+            render(salidasCache);
         } catch (e) {
             const msg = (e && e.message) ? e.message : String(e);
             if (!salidasCache.length) {
@@ -701,18 +531,15 @@
             }
         } finally {
             cargando = false;
-            btnActualizar.disabled = false;
         }
     }
 
-    btnActualizar.addEventListener('click', () => { cargarDesdeGoogle(); });
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') cargarDesdeGoogle();
     });
     window.addEventListener('resize', escalaMovil);
     window.addEventListener('orientationchange', () => { setTimeout(escalaMovil, 150); });
 
-    inicializarFiltroFechas();
     escalaMovil();
     cargarDesdeGoogle();
 </script>
