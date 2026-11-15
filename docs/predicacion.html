@@ -358,6 +358,60 @@
         .modal-map-msg[hidden] { display: none !important; }
         .modal-map-msg.error { color: #b00020; }
 
+        /* My Maps no dibuja "estás aquí": marcamos el centro tras centrar en tu GPS. */
+        .mm-yo {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 4;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+
+        .mm-yo[hidden] { display: none !important; }
+
+        .mm-yo-ring {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: rgba(26, 115, 232, 0.18);
+            border: 1px solid rgba(26, 115, 232, 0.35);
+            transform: translate(-50%, -50%);
+        }
+
+        .mm-yo-dot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1a73e8;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+            transform: translate(-50%, -50%);
+        }
+
+        .mm-yo-label {
+            position: absolute;
+            left: 50%;
+            top: calc(50% + 22px);
+            transform: translateX(-50%);
+            white-space: nowrap;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(26, 38, 52, 0.88);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
         .modal-foot {
             display: flex;
             gap: 8px;
@@ -437,6 +491,11 @@
         </div>
         <div class="modal-map-wrap" id="mm-map-wrap">
             <div class="modal-map-msg" id="mm-msg">Cargando mapa…</div>
+            <div class="mm-yo" id="mm-yo" hidden>
+                <div class="mm-yo-ring"></div>
+                <div class="mm-yo-dot"></div>
+                <div class="mm-yo-label">Estás aquí</div>
+            </div>
         </div>
         <div class="modal-foot">
             <button type="button" class="modal-btn modal-btn-secondary" id="mm-ubicacion">Mi ubicación</button>
@@ -456,6 +515,7 @@
     const mmMsg = document.getElementById('mm-msg');
     const mmAbrir = document.getElementById('mm-abrir');
     const mmUbicacionBtn = document.getElementById('mm-ubicacion');
+    const mmYo = document.getElementById('mm-yo');
     const MY_MAPS_MID = '1fQJSpbw8ChDWK6m8mu64a7ts-Ra0Kqc';
     const FALLBACK_DESCRIPCIONES_PUEBLO = {
         '200': 'Cadret',
@@ -651,6 +711,7 @@
     function mostrarMsgMapa(texto, esError) {
         const iframe = mmMapWrap.querySelector('iframe');
         if (iframe) iframe.remove();
+        ocultarPuntoYo();
         mmMsg.className = 'modal-map-msg' + (esError ? ' error' : '');
         mmMsg.textContent = texto;
         mmMsg.hidden = false;
@@ -671,6 +732,14 @@
         iframe.src = src;
     }
 
+    function mostrarPuntoYo() {
+        mmYo.hidden = false;
+    }
+
+    function ocultarPuntoYo() {
+        mmYo.hidden = true;
+    }
+
     function mensajeErrorGeo(err) {
         if (!err) return 'No se pudo obtener la ubicación.';
         if (err.code === 1) return 'Activá el permiso de ubicación para este sitio y reintentá.';
@@ -679,9 +748,15 @@
         return 'No se pudo obtener la ubicación.';
     }
 
-    function centrarMyMapsEn(lat, lon, zoom, subtitulo) {
+    function centrarMyMapsEn(lat, lon, zoom, subtitulo, mostrarYo) {
         pintarIframeMapa(urlMyMaps(lat, lon, zoom, true));
-        mmAbrir.href = urlMyMaps(lat, lon, zoom, false);
+        if (mostrarYo) {
+            mmAbrir.href = `https://www.google.com/maps?q=${lat},${lon}&z=${zoom || 17}`;
+            mostrarPuntoYo();
+        } else {
+            mmAbrir.href = urlMyMaps(lat, lon, zoom, false);
+            ocultarPuntoYo();
+        }
         mmAbrir.removeAttribute('aria-disabled');
         if (subtitulo) mmSubtitle.textContent = subtitulo;
     }
@@ -703,6 +778,7 @@
         }
         mmUbicacionBtn.disabled = true;
         mmSubtitle.textContent = 'Buscando tu ubicación…';
+        ocultarPuntoYo();
         try {
             let pos = null;
             // Primero rápido (red/Wi‑Fi). Si falla, reintenta con GPS.
@@ -725,9 +801,11 @@
                 pos.coords.latitude,
                 pos.coords.longitude,
                 17,
-                'Centrado en tu ubicación · mapa Carlos Casares'
+                'Punto azul: estás aquí · mapa Carlos Casares',
+                true
             );
         } catch (err) {
+            ocultarPuntoYo();
             mmSubtitle.textContent = mensajeErrorGeo(err);
         } finally {
             mmUbicacionBtn.disabled = false;
@@ -739,6 +817,7 @@
         mapaModal.setAttribute('aria-hidden', 'true');
         const iframe = mmMapWrap.querySelector('iframe');
         if (iframe) iframe.src = 'about:blank';
+        ocultarPuntoYo();
         mmTerrGps = null;
         mmSubtitle.textContent = 'Ubicación en el mapa';
         mmUbicacionBtn.disabled = false;
@@ -754,6 +833,7 @@
         mmAbrir.setAttribute('aria-disabled', 'true');
         mmUbicacionBtn.disabled = false;
         mmTerrGps = null;
+        ocultarPuntoYo();
         mostrarMsgMapa('Cargando mapa…', false);
         mapaModal.classList.add('open');
         mapaModal.setAttribute('aria-hidden', 'false');
@@ -769,7 +849,7 @@
             }
             mmTerrGps = gps;
             mmTerrZoom = esTerritorioPueblo(num) ? 14 : 17;
-            centrarMyMapsEn(gps.lat, gps.lon, mmTerrZoom, 'Ubicación en el mapa de Carlos Casares');
+            centrarMyMapsEn(gps.lat, gps.lon, mmTerrZoom, 'Ubicación en el mapa de Carlos Casares', false);
         } catch (e) {
             const msg = (e && e.message) ? e.message : String(e);
             mostrarMsgMapa('No se pudo cargar el mapa. ' + msg, true);
