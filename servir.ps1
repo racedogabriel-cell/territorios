@@ -50,6 +50,7 @@ $mime = @{
     '.js'   = 'application/javascript; charset=utf-8'
     '.svg'  = 'image/svg+xml; charset=utf-8'
     '.json' = 'application/json; charset=utf-8'
+    '.geojson' = 'application/geo+json; charset=utf-8'
     '.csv'  = 'text/csv; charset=utf-8'
     '.png'  = 'image/png'
     '.jpg'  = 'image/jpeg'
