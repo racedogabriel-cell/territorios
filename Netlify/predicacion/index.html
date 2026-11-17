@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -14,6 +14,7 @@
     <link rel="apple-touch-icon" href="icon-192.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -334,16 +335,42 @@
             overflow: hidden;
         }
 
-        /* Google My Maps no permite ocultar su encabezado: se recorta arriba. */
-        .modal-map-wrap iframe {
-            display: block;
+        #mm-leaflet {
+            position: absolute;
+            inset: 0;
             width: 100%;
-            height: calc(100% + 96px);
-            min-height: calc(58dvh + 96px);
-            border: 0;
-            margin-top: -96px;
-            touch-action: pan-x pan-y pinch-zoom;
+            height: 100%;
+            z-index: 1;
+            background: #e8eaed;
         }
+        #mm-leaflet[hidden] { display: none !important; }
+
+        .leaflet-pane .capa-rotulos,
+        .leaflet-pane .capa-rotulos-google {
+            filter: contrast(1.12) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 2px #fff);
+        }
+        .leaflet-div-icon { background: transparent !important; border: 0 !important; }
+        .mm-leaflet-pin-wrap { background: transparent !important; border: 0 !important; }
+        .mm-leaflet-pin {
+            width: 14px;
+            height: 14px;
+            margin: 2px;
+            border-radius: 50%;
+            background: #ffeb3b;
+            border: 3px solid #d93025;
+            box-shadow: 0 0 0 2px rgba(217, 48, 37, 0.28), 0 2px 6px rgba(0, 0, 0, 0.35);
+        }
+        .leaflet-tooltip.mm-leaflet-tip {
+            background: rgba(32, 33, 36, 0.92);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        .leaflet-tooltip.mm-leaflet-tip::before { border-top-color: rgba(32, 33, 36, 0.92); }
 
         .modal-map-msg {
             position: absolute;
@@ -406,11 +433,14 @@
             <button type="button" class="modal-close" id="mm-cerrar">Cerrar</button>
         </div>
         <div class="modal-map-wrap" id="mm-map-wrap">
+            <div id="mm-leaflet" hidden></div>
             <div class="modal-map-msg" id="mm-msg">Cargando mapa…</div>
         </div>
     </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="./mapa-modal.js"></script>
 <script src="../google.js"></script>
 <script>
     const root = document.getElementById('root');
@@ -419,8 +449,8 @@
     const mmTitle = document.getElementById('mm-title');
     const mmSubtitle = document.getElementById('mm-subtitle');
     const mmMapWrap = document.getElementById('mm-map-wrap');
+    const mmLeaflet = document.getElementById('mm-leaflet');
     const mmMsg = document.getElementById('mm-msg');
-    const MY_MAPS_MID = '1fQJSpbw8ChDWK6m8mu64a7ts-Ra0Kqc';
     const FALLBACK_DESCRIPCIONES_PUEBLO = {
         '200': 'Cadret',
         '201': 'Algarrobo',
@@ -436,8 +466,6 @@
     let catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO);
     const descripcionPorNumeroMemo = {};
     let cargando = false;
-    let mapaMetaCache = null;
-    let mapaMetaPromise = null;
     let mapaHistoryOpen = false;
     function esTerritorioPueblo(t) {
         const n = parseInt(t, 10);
@@ -575,54 +603,6 @@
         return leerLatLonMeta(gps);
     }
 
-    async function obtenerMapaMeta() {
-        if (mapaMetaCache) return mapaMetaCache;
-        if (!mapaMetaPromise) {
-            mapaMetaPromise = fetch('../mapa_meta.json', { cache: 'no-store' })
-                .then(async (resp) => {
-                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                    mapaMetaCache = await resp.json();
-                    return mapaMetaCache;
-                })
-                .catch((err) => {
-                    mapaMetaPromise = null;
-                    throw err;
-                });
-        }
-        return mapaMetaPromise;
-    }
-
-    function gpsDeTerritorio(meta, numero) {
-        const num = String(numero ?? '').trim();
-        const gps = meta && meta.gps && typeof meta.gps === 'object' ? meta.gps : {};
-        const directo = leerLatLonMeta(gps[num]);
-        if (directo) return directo;
-        if (num.includes('.')) {
-            const base = num.split('.')[0];
-            return leerLatLonMeta(gps[base]);
-        }
-        return null;
-    }
-
-    function urlMyMapsEmbed(lat, lon, zoom) {
-        const q = new URLSearchParams({
-            mid: MY_MAPS_MID,
-            ll: `${lat},${lon}`,
-            z: String(zoom || 17)
-        });
-        return `https://www.google.com/maps/d/embed?${q.toString()}`;
-    }
-
-    function urlGoogleMapsPin(lat, lon, zoom) {
-        const q = new URLSearchParams({
-            q: `${lat},${lon}`,
-            z: String(zoom || 17),
-            hl: 'es',
-            output: 'embed'
-        });
-        return `https://maps.google.com/maps?${q.toString()}`;
-    }
-
     function tituloTerritorioModal(numero) {
         const num = String(numero ?? '').trim();
         const desc = descripcionTerritorio(num);
@@ -633,35 +613,11 @@
     }
 
     function mostrarMsgMapa(texto, esError) {
-        const iframe = mmMapWrap.querySelector('iframe');
-        if (iframe) iframe.remove();
+        if (mmLeaflet) mmLeaflet.hidden = true;
+        if (window.PredicacionMapaModal) window.PredicacionMapaModal.limpiar();
         mmMsg.className = 'modal-map-msg' + (esError ? ' error' : '');
         mmMsg.textContent = texto;
         mmMsg.hidden = false;
-    }
-
-    function pintarIframeMapa(src) {
-        mmMsg.hidden = true;
-        let iframe = mmMapWrap.querySelector('iframe');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.title = 'Mapa del territorio';
-            iframe.loading = 'lazy';
-            iframe.referrerPolicy = 'no-referrer-when-downgrade';
-            iframe.allowFullscreen = true;
-            mmMapWrap.appendChild(iframe);
-        }
-        iframe.src = src;
-    }
-
-    function centrarMyMapsEn(lat, lon, zoom, subtitulo) {
-        pintarIframeMapa(urlMyMapsEmbed(lat, lon, zoom));
-        if (subtitulo) mmSubtitle.textContent = subtitulo;
-    }
-
-    function centrarPinEncuentro(lat, lon, zoom, subtitulo) {
-        pintarIframeMapa(urlGoogleMapsPin(lat, lon, zoom));
-        if (subtitulo) mmSubtitle.textContent = subtitulo;
     }
 
     function cerrarModalMapa(opts) {
@@ -669,8 +625,8 @@
         if (!mapaModal.classList.contains('open')) return;
         mapaModal.classList.remove('open');
         mapaModal.setAttribute('aria-hidden', 'true');
-        const iframe = mmMapWrap.querySelector('iframe');
-        if (iframe) iframe.src = 'about:blank';
+        if (mmLeaflet) mmLeaflet.hidden = true;
+        if (window.PredicacionMapaModal) window.PredicacionMapaModal.limpiar();
         mmSubtitle.textContent = 'Ubicación en el mapa';
         if (!fromPopstate && mapaHistoryOpen) {
             mapaHistoryOpen = false;
@@ -690,7 +646,9 @@
             extras && extras.gps
         );
         mmTitle.textContent = tituloTerritorioModal(num);
-        mmSubtitle.textContent = puntoTxt ? `Punto: ${puntoTxt}` : 'Mapa de Carlos Casares';
+        mmSubtitle.textContent = puntoTxt
+            ? (gpsPunto ? `Punto de encuentro: ${puntoTxt}` : `Territorio (sin GPS del punto «${puntoTxt}»)`)
+            : 'Mapa de territorios';
         mostrarMsgMapa('Cargando mapa…', false);
         if (!mapaModal.classList.contains('open')) {
             history.pushState({ mapaModal: true }, '');
@@ -699,30 +657,15 @@
         mapaModal.classList.add('open');
         mapaModal.setAttribute('aria-hidden', 'false');
         try {
-            if (gpsPunto) {
-                const zoom = esTerritorioPueblo(num) ? 15 : 18;
-                const sub = puntoTxt
-                    ? `Punto de encuentro: ${puntoTxt}`
-                    : 'Punto de encuentro';
-                centrarPinEncuentro(gpsPunto.lat, gpsPunto.lon, zoom, sub);
-                return;
-            }
-            const meta = await obtenerMapaMeta();
-            const gps = gpsDeTerritorio(meta, num);
-            if (!gps) {
-                mostrarMsgMapa(
-                    puntoTxt
-                        ? `Sin GPS del punto «${puntoTxt}». Tampoco hay coordenadas del territorio.`
-                        : 'No hay coordenadas para este territorio.',
-                    true
-                );
-                return;
-            }
-            const zoom = esTerritorioPueblo(num) ? 14 : 17;
-            const sub = puntoTxt
-                ? `Territorio (sin GPS del punto «${puntoTxt}»)`
-                : 'Mapa de Carlos Casares';
-            centrarMyMapsEn(gps.lat, gps.lon, zoom, sub);
+            if (!window.PredicacionMapaModal) throw new Error('No se cargó el módulo del mapa.');
+            mmLeaflet.hidden = false;
+            await window.PredicacionMapaModal.mostrar({
+                containerEl: mmLeaflet,
+                numero: num,
+                puntoTxt,
+                gpsPunto
+            });
+            mmMsg.hidden = true;
         } catch (e) {
             const msg = (e && e.message) ? e.message : String(e);
             mostrarMsgMapa('No se pudo cargar el mapa. ' + msg, true);
@@ -895,4 +838,3 @@
 </script>
 </body>
 </html>
-

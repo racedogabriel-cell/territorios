@@ -1,14 +1,16 @@
 /* Service worker de la PWA Predicación (consulta). Scope: ./predicacion/ */
-const CACHE = 'predicacion-shell-v1';
+const CACHE = 'predicacion-shell-v3';
 const ASSETS = [
     './',
     './index.html',
     './manifest.json',
+    './mapa-modal.js',
     './icon-192.png',
     './icon-512.png',
     './icon-maskable-512.png',
     '../google.js',
-    '../mapa_meta.json'
+    '../mapa_meta.json',
+    '../mapa.svg'
 ];
 
 function esNavegacion(request) {
@@ -67,7 +69,8 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    if (/\/(predicacion\/(index\.html|manifest\.json|icon-.*\.png|sw\.js)|google\.js|mapa_meta\.json)$/i.test(url.pathname)) {
+    if (/\/(predicacion\/(index\.html|manifest\.json|mapa-modal\.js|icon-.*\.png|sw\.js)|google\.js|mapa_meta\.json|mapa\.svg)$/i.test(url.pathname)) {
         event.respondWith(redPrimero(req));
     }
 });
+

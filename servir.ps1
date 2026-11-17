@@ -2689,6 +2689,16 @@ try {
                 if ([string]::IsNullOrWhiteSpace($rel)) { $rel = 'mapa.html' }
                 $archivo = Resolve-SafeStaticPath $raiz $rel
 
+                # Carpetas: servir index.html (ej. /docs/predicacion/ → .../index.html)
+                if ($null -ne $archivo -and (Test-Path $archivo) -and (Get-Item $archivo).PSIsContainer) {
+                    $idx = Join-Path $archivo 'index.html'
+                    if (Test-Path $idx) {
+                        $archivo = $idx
+                        if (-not $rel.EndsWith('/')) { $rel = "$rel/" }
+                        $rel = "$rel" + 'index.html'
+                    }
+                }
+
                 if ($null -eq $archivo) {
                     $resp.StatusCode = 403
                     $msg = [System.Text.Encoding]::UTF8.GetBytes("403 - Ruta no permitida")
