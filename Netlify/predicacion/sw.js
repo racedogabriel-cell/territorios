@@ -1,5 +1,5 @@
 /* Service worker de la PWA Predicación (consulta). Scope: ./predicacion/ */
-const CACHE = 'predicacion-shell-v4';
+const CACHE = 'predicacion-shell-v5';
 const ASSETS = [
     './',
     './index.html',

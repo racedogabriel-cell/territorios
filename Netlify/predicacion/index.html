@@ -414,6 +414,65 @@
         }
 
         .vacio.error { color: #b00020; }
+
+        #install-modal.modal-backdrop {
+            z-index: 60;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 14px;
+        }
+
+        #install-modal .install-card {
+            width: min(100%, 380px);
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+            padding: 18px 16px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #install-modal .install-title {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: #1a1a1a;
+            line-height: 1.25;
+        }
+
+        #install-modal .install-text {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        #install-modal .install-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        #install-modal .install-actions button {
+            flex: 1;
+            border: 0;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        #install-modal .install-yes {
+            background: #1a73e8;
+            color: #fff;
+        }
+
+        #install-modal .install-no {
+            background: #eef2f6;
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -421,6 +480,17 @@
 <div class="canvas" id="capture">
     <div class="header"><h1 id="header-text">Salidas de predicación</h1></div>
     <div id="root"></div>
+</div>
+
+<div id="install-modal" class="modal-backdrop" aria-hidden="true" hidden>
+    <div class="install-card" role="dialog" aria-modal="true" aria-labelledby="install-title">
+        <div class="install-title" id="install-title">Instalar aplicación</div>
+        <div class="install-text" id="install-text">¿Desea instalar Predicación como aplicación en este dispositivo?</div>
+        <div class="install-actions">
+            <button type="button" class="install-no" id="install-no">Ahora no</button>
+            <button type="button" class="install-yes" id="install-yes">Instalar</button>
+        </div>
+    </div>
 </div>
 
 <div id="mapa-modal" class="modal-backdrop" aria-hidden="true">
@@ -833,6 +903,126 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () {});
     }
+
+    (function instalarPwaPrompt() {
+        const INSTALL_DISMISS_KEY = 'predicacion-install-dismiss-until';
+        const DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
+        const installModal = document.getElementById('install-modal');
+        const installText = document.getElementById('install-text');
+        const btnYes = document.getElementById('install-yes');
+        const btnNo = document.getElementById('install-no');
+        let deferredPrompt = null;
+        let modoIos = false;
+
+        function yaInstalada() {
+            const standalone = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+            return !!standalone;
+        }
+
+        function dismissActivo() {
+            try {
+                const until = Number(localStorage.getItem(INSTALL_DISMISS_KEY) || 0);
+                return Number.isFinite(until) && Date.now() < until;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function guardarDismiss() {
+            try {
+                localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now() + DISMISS_MS));
+            } catch (_) {}
+        }
+
+        function esIosSafari() {
+            const ua = navigator.userAgent || '';
+            const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome|Android/.test(ua);
+            return iOS && safari;
+        }
+
+        function cerrarInstall() {
+            installModal.classList.remove('open');
+            installModal.setAttribute('aria-hidden', 'true');
+            installModal.hidden = true;
+        }
+
+        function mostrarInstall(texto, opts) {
+            modoIos = !!(opts && opts.ios);
+            installText.textContent = texto;
+            btnYes.textContent = modoIos ? 'Entendido' : 'Instalar';
+            btnNo.hidden = !!modoIos;
+            installModal.hidden = false;
+            installModal.classList.add('open');
+            installModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function intentarMostrar() {
+            if (yaInstalada() || dismissActivo()) return;
+            if (deferredPrompt) {
+                mostrarInstall('¿Desea instalar Predicación como aplicación en este dispositivo?');
+                return;
+            }
+            if (esIosSafari()) {
+                mostrarInstall(
+                    'Para instalarla: toque Compartir y luego «Agregar a pantalla de inicio».',
+                    { ios: true }
+                );
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (ev) => {
+            ev.preventDefault();
+            deferredPrompt = ev;
+            setTimeout(intentarMostrar, 900);
+        });
+
+        btnNo.addEventListener('click', () => {
+            guardarDismiss();
+            cerrarInstall();
+        });
+
+        btnYes.addEventListener('click', async () => {
+            if (modoIos) {
+                guardarDismiss();
+                cerrarInstall();
+                return;
+            }
+            if (!deferredPrompt) {
+                cerrarInstall();
+                return;
+            }
+            const promptEvent = deferredPrompt;
+            deferredPrompt = null;
+            try {
+                await promptEvent.prompt();
+                const choice = await promptEvent.userChoice;
+                if (!choice || choice.outcome !== 'accepted') guardarDismiss();
+            } catch (_) {
+                guardarDismiss();
+            }
+            cerrarInstall();
+        });
+
+        installModal.addEventListener('click', (ev) => {
+            if (ev.target === installModal) {
+                guardarDismiss();
+                cerrarInstall();
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            try { localStorage.removeItem(INSTALL_DISMISS_KEY); } catch (_) {}
+            cerrarInstall();
+        });
+
+        // iOS no dispara beforeinstallprompt: preguntar al abrir.
+        setTimeout(() => {
+            if (!deferredPrompt) intentarMostrar();
+        }, 1200);
+    })();
 
     cargarDesdeGoogle();
 </script>
