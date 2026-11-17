@@ -79,6 +79,25 @@ function ensureSheet_(name, headers) {
   return sh;
 }
 
+function ensureSalidasGpsColumns_() {
+  var sh = ss_().getSheetByName(SHEET_SALIDAS);
+  if (!sh) return;
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var header = sh.getRange(1, 1, 1, lastCol).getValues()[0] || [];
+  var have = {};
+  for (var i = 0; i < header.length; i++) {
+    have[String(header[i] || '').trim().toLowerCase()] = true;
+  }
+  var extras = ['PuntoEncuentroGps', 'PuntoEncuentroLat', 'PuntoEncuentroLon'];
+  for (var e = 0; e < extras.length; e++) {
+    var name = extras[e];
+    if (have[name.toLowerCase()]) continue;
+    sh.getRange(1, header.length + 1).setValue(name);
+    header.push(name);
+    have[name.toLowerCase()] = true;
+  }
+}
+
 function inicializar() {
   ensureSheet_(SHEET_DATOS, [
     'canal', 'exportado', 'version', 'responsables_json',
@@ -86,8 +105,10 @@ function inicializar() {
   ]);
   ensureSheet_(SHEET_SALIDAS, [
     'NumeroTerritorio', 'PuntosDeEncuentros', 'Responsables', 'Grupos',
-    'Enviado', 'Prioridad', 'ManzanasPendientes', 'Direccion', 'Descripcion'
+    'Enviado', 'Prioridad', 'ManzanasPendientes', 'Direccion', 'Descripcion',
+    'PuntoEncuentroGps', 'PuntoEncuentroLat', 'PuntoEncuentroLon'
   ]);
+  ensureSalidasGpsColumns_();
   ensureSheet_(SHEET_MAPA, ['numero', 'json']);
   ensureSheet_(SHEET_ACCIONES, [
     'id', 'tipo', 'payload', 'origen', 'procesado', 'creado_en', 'procesado_en'
@@ -197,7 +218,10 @@ function cargarBundleDesdeHojas_() {
       Prioridad: cell_(r, sIdx, ['prioridad'], ''),
       ManzanasPendientes: cell_(r, sIdx, ['manzanaspendientes', 'manzanas'], ''),
       Direccion: cell_(r, sIdx, ['direccion'], ''),
-      Descripcion: cell_(r, sIdx, ['descripcion'], '')
+      Descripcion: cell_(r, sIdx, ['descripcion'], ''),
+      PuntoEncuentroGps: cell_(r, sIdx, ['puntoencuentrogps', 'gps'], ''),
+      PuntoEncuentroLat: cell_(r, sIdx, ['puntoencuentrolat', 'lat'], ''),
+      PuntoEncuentroLon: cell_(r, sIdx, ['puntoencuentrolon', 'lon', 'lng'], '')
     });
   }
 
@@ -277,6 +301,7 @@ function upsertDatosSemana_(bundle) {
   }
 
   var salidasSh = sheet_(SHEET_SALIDAS);
+  ensureSalidasGpsColumns_();
   clearKeepHeader_(salidasSh);
   var salidas = Array.isArray(bundle.salidas) ? bundle.salidas : [];
   if (salidas.length) {
@@ -292,10 +317,13 @@ function upsertDatosSemana_(bundle) {
         it.Prioridad == null ? '' : it.Prioridad,
         it.ManzanasPendientes || '',
         it.Direccion || '',
-        it.Descripcion || ''
+        it.Descripcion || '',
+        it.PuntoEncuentroGps || it.puntoEncuentroGps || '',
+        it.PuntoEncuentroLat != null ? it.PuntoEncuentroLat : (it.puntoEncuentroLat != null ? it.puntoEncuentroLat : ''),
+        it.PuntoEncuentroLon != null ? it.PuntoEncuentroLon : (it.puntoEncuentroLon != null ? it.puntoEncuentroLon : '')
       ]);
     }
-    salidasSh.getRange(2, 1, out.length, 9).setValues(out);
+    salidasSh.getRange(2, 1, out.length, 12).setValues(out);
   }
 
   var mapaSh = sheet_(SHEET_MAPA);

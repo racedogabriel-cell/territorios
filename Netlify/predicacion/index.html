@@ -1,0 +1,898 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a73e8" />
+    <meta name="description" content="Consulta de salidas de predicación y puntos de encuentro." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Predicación" />
+    <meta name="application-name" content="Predicación" />
+    <title>Salidas de predicación</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --primary-bg: #f2f5f8;
+            --accent: #b78b1e;
+            --accent-bg: #fdf5e6;
+            --danger: #cc0000;
+            --bg: #ffffff;
+            --group-1-bg: #d9e7ff;
+            --group-1-fg: #034cbc;
+            --group-1-accent: #0062ff;
+            --group-2-bg: #e8fad9;
+            --group-2-fg: #4ca604;
+            --group-2-accent: #65e000;
+            --group-3-bg: #fed9e6;
+            --group-3-fg: #b70543;
+            --group-3-accent: #fa0057;
+            --group-default-bg: #eef2f6;
+            --group-default-fg: #2c3e50;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            background: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            min-height: 100dvh;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+
+        .canvas {
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+            text-align: center;
+            border-bottom: 4px solid var(--accent);
+        }
+
+        .header h1 {
+            font-size: clamp(0.95rem, 4.2vw, 1.15rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1.2;
+            letter-spacing: 0.02em;
+        }
+
+        .day-block {
+            display: flex;
+            border-bottom: 3px solid #ccc;
+        }
+
+        .day-sidebar {
+            background: var(--primary-bg);
+            color: var(--primary);
+            width: 2.35rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 1px;
+            flex-shrink: 0;
+            border-right: 1px solid #ccc;
+            padding: 8px 2px 6px;
+        }
+
+        .day-sidebar.weekend { background: var(--accent-bg); color: var(--accent); }
+
+        .day-num {
+            font-size: 1.05rem;
+            font-weight: 900;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .day-name {
+            font-size: 0.62rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            line-height: 1.1;
+        }
+
+        .meetings-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .meeting {
+            padding: 7px 8px 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .meeting:last-child { border-bottom: none; }
+
+        .meeting:nth-child(even) { background-color: #fafafa; }
+
+        .meeting.meeting--pueblo,
+        .meeting.meeting--pueblo:nth-child(even) { background-color: #f3e8dc; }
+
+        .row-main {
+            display: grid;
+            grid-template-columns: 3.35rem minmax(0, 1fr);
+            column-gap: 6px;
+            align-items: start;
+            width: 100%;
+        }
+
+        .time {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #000;
+            line-height: 1.15;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            padding-top: 1px;
+        }
+
+        .info-group {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .place {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            line-height: 1.18;
+            overflow-wrap: anywhere;
+        }
+
+        .place--group-1 { color: var(--group-1-fg); }
+        .place--group-2 { color: var(--group-2-fg); }
+        .place--group-3 { color: var(--group-3-fg); }
+        .place--group-default { color: var(--group-default-fg); }
+
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 6px;
+        }
+
+        .sub-info {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #555;
+            line-height: 1.25;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .group-pill {
+            display: inline-flex;
+            align-items: baseline;
+            flex-wrap: nowrap;
+            gap: 0 4px;
+            max-width: 100%;
+            min-width: 0;
+            padding: 1px 6px;
+            border-radius: 5px;
+            line-height: 1.25;
+            border-left: 3px solid transparent;
+            overflow: hidden;
+        }
+
+        .group-pill--1 { background: var(--group-1-bg); border-left-color: var(--group-1-accent); }
+        .group-pill--2 { background: var(--group-2-bg); border-left-color: var(--group-2-accent); }
+        .group-pill--3 { background: var(--group-3-bg); border-left-color: var(--group-3-accent); }
+        .group-pill--default { background: var(--group-default-bg); }
+
+        .group-pill-label {
+            flex-shrink: 0;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .group-pill--1 .group-pill-label { color: var(--group-1-fg); }
+        .group-pill--2 .group-pill-label { color: var(--group-2-fg); }
+        .group-pill--3 .group-pill-label { color: var(--group-3-fg); }
+        .group-pill--default .group-pill-label { color: var(--group-default-fg); }
+
+        .group-pill-resp {
+            min-width: 0;
+            font-weight: 700;
+            color: #555;
+            text-transform: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .terr-badges {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .badge {
+            appearance: none;
+            font: inherit;
+            background: var(--primary);
+            color: #fff;
+            padding: 3px 7px;
+            border-radius: 5px;
+            font-size: 0.88rem;
+            font-weight: 900;
+            border: 2px solid transparent;
+            line-height: 1.15;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .badge:active { transform: scale(0.97); }
+
+        .badge.note { background: var(--accent); color: #fff; }
+        .badge.danger-border { border-color: var(--danger); }
+        .badge.badge-pueblo {
+            background: #7b4f2e;
+            color: #fff;
+            font-size: 0.78rem;
+            padding: 3px 8px;
+            letter-spacing: 0.01em;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        .modal-backdrop.open { display: flex; }
+
+        .modal-card {
+            width: 100%;
+            max-width: 720px;
+            max-height: min(92dvh, 920px);
+            background: #fff;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.28);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .modal-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 12px 10px;
+            border-bottom: 1px solid #e6ebf0;
+        }
+
+        .modal-titles { flex: 1; min-width: 0; }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 900;
+            color: #1a1a1a;
+            line-height: 1.2;
+        }
+
+        .modal-subtitle {
+            margin-top: 2px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #60707f;
+            line-height: 1.3;
+        }
+
+        .modal-close {
+            flex-shrink: 0;
+            border: none;
+            border-radius: 8px;
+            background: #eceff1;
+            color: #263238;
+            font-size: 0.85rem;
+            font-weight: 800;
+            min-height: 36px;
+            padding: 0 12px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .modal-map-wrap {
+            position: relative;
+            flex: 1;
+            min-height: 58dvh;
+            background: #dfe6ee;
+            overflow: hidden;
+        }
+
+        /* Google My Maps no permite ocultar su encabezado: se recorta arriba. */
+        .modal-map-wrap iframe {
+            display: block;
+            width: 100%;
+            height: calc(100% + 96px);
+            min-height: calc(58dvh + 96px);
+            border: 0;
+            margin-top: -96px;
+            touch-action: pan-x pan-y pinch-zoom;
+        }
+
+        .modal-map-msg {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #455a64;
+            line-height: 1.35;
+            background: rgba(223, 230, 238, 0.92);
+        }
+
+        .modal-map-msg[hidden] { display: none !important; }
+        .modal-map-msg.error { color: #b00020; }
+
+        .alert-box {
+            margin-left: calc(3.35rem + 6px);
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            line-height: 1.25;
+            border-left: 3px solid;
+            overflow-wrap: anywhere;
+        }
+
+        .alert-box.manzanas { background: #fef9e7; border-left-color: var(--accent); color: #444; }
+        .alert-box.no-visitar { background: #fdedec; border-left-color: var(--danger); color: #444; }
+
+        .vacio {
+            padding: 20px 16px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .vacio.error { color: #b00020; }
+    </style>
+</head>
+<body>
+
+<div class="canvas" id="capture">
+    <div class="header"><h1 id="header-text">Salidas de predicación</h1></div>
+    <div id="root"></div>
+</div>
+
+<div id="mapa-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mm-title">
+        <div class="modal-head">
+            <div class="modal-titles">
+                <div class="modal-title" id="mm-title">Territorio</div>
+                <div class="modal-subtitle" id="mm-subtitle">Ubicación en el mapa</div>
+            </div>
+            <button type="button" class="modal-close" id="mm-cerrar">Cerrar</button>
+        </div>
+        <div class="modal-map-wrap" id="mm-map-wrap">
+            <div class="modal-map-msg" id="mm-msg">Cargando mapa…</div>
+        </div>
+    </div>
+</div>
+
+<script src="../google.js"></script>
+<script>
+    const root = document.getElementById('root');
+    const headerText = document.getElementById('header-text');
+    const mapaModal = document.getElementById('mapa-modal');
+    const mmTitle = document.getElementById('mm-title');
+    const mmSubtitle = document.getElementById('mm-subtitle');
+    const mmMapWrap = document.getElementById('mm-map-wrap');
+    const mmMsg = document.getElementById('mm-msg');
+    const MY_MAPS_MID = '1fQJSpbw8ChDWK6m8mu64a7ts-Ra0Kqc';
+    const FALLBACK_DESCRIPCIONES_PUEBLO = {
+        '200': 'Cadret',
+        '201': 'Algarrobo',
+        '202': 'Moctezuma',
+        '203': 'Hirch',
+        '204': 'Smith',
+        '205': 'Hortencia',
+        '206': 'Ordoqui',
+        '207': 'Santo Tomas'
+    };
+
+    let salidasCache = [];
+    let catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO);
+    const descripcionPorNumeroMemo = {};
+    let cargando = false;
+    let mapaMetaCache = null;
+    let mapaMetaPromise = null;
+    let mapaHistoryOpen = false;
+    function esTerritorioPueblo(t) {
+        const n = parseInt(t, 10);
+        return !isNaN(n) && n >= 200;
+    }
+
+    function descripcionTerritorio(numero, fallbackDesc) {
+        const num = String(numero ?? '').trim();
+        const direct = String(fallbackDesc ?? '').trim();
+        if (direct) {
+            descripcionPorNumeroMemo[num] = direct;
+            return direct;
+        }
+        if (descripcionPorNumeroMemo[num]) return descripcionPorNumeroMemo[num];
+        const fromCat = String(catalogoDescripciones[num] || '').trim();
+        if (fromCat) {
+            descripcionPorNumeroMemo[num] = fromCat;
+            return fromCat;
+        }
+        return '';
+    }
+
+    function etiquetaTerritorio(numero, fallbackDesc) {
+        const desc = descripcionTerritorio(numero, fallbackDesc);
+        if (desc) return desc;
+        return esTerritorioPueblo(numero) ? `Pueblo T-${numero}` : String(numero ?? '');
+    }
+
+    function normalizarBundle(json) {
+        if (Array.isArray(json)) {
+            return { salidas: json, descripciones: {} };
+        }
+        if (json && typeof json === 'object' && Array.isArray(json.salidas)) {
+            const descripciones = {};
+            if (json.descripciones && typeof json.descripciones === 'object') {
+                for (const [k, v] of Object.entries(json.descripciones)) {
+                    const num = String(k || '').trim();
+                    const desc = String(v || '').trim();
+                    if (num && desc) descripciones[num] = desc;
+                }
+            }
+            return { salidas: json.salidas, descripciones };
+        }
+        throw new Error('Formato inválido: se esperaba un objeto con salidas.');
+    }
+
+    function parseRows(rows) {
+        if (!Array.isArray(rows)) return [];
+        function parseFechaFlexible(v) {
+            if (!v) return new Date('');
+            const txt = String(v).trim();
+            let d = new Date(txt);
+            if (!isNaN(d)) return d;
+            d = new Date(txt.replace('T', ' ').replace(/-/g, '/'));
+            return d;
+        }
+        return rows.map((item) => ({
+            t: item.NumeroTerritorio || '',
+            p: item.PuntosDeEncuentros || '',
+            r: item.Responsables || '',
+            g: item.Grupos || '',
+            d: parseFechaFlexible(item.Enviado),
+            pr: Number.isFinite(Number(item.Prioridad)) ? Number(item.Prioridad) : NaN,
+            m: item.ManzanasPendientes || '',
+            nv: item.Direccion || '',
+            desc: String(item.Descripcion || item.descripcion || '').trim(),
+            gps: item.PuntoEncuentroGps || item.puntoEncuentroGps || '',
+            lat: item.PuntoEncuentroLat ?? item.puntoEncuentroLat ?? '',
+            lon: item.PuntoEncuentroLon ?? item.puntoEncuentroLon ?? ''
+        })).filter((x) => !isNaN(x.d)).sort((a, b) => a.d - b.d);
+    }
+
+    function escapeHtml(txt) {
+        return String(txt ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function groupPillVariant(groupName) {
+        const match = String(groupName || '').trim().match(/^grupo\s*(\d+)\b/i);
+        if (!match) return 'default';
+        return ['1', '2', '3'].includes(match[1]) ? match[1] : 'default';
+    }
+
+    function etiquetaGrupoCorta(groupName) {
+        const variant = groupPillVariant(groupName);
+        if (variant !== 'default') return `G${variant}`;
+        const txt = String(groupName || '').trim();
+        return txt.replace(/^grupo\s+/i, 'G');
+    }
+
+    function htmlGroupBlock(groupName, responsables) {
+        const variant = groupPillVariant(groupName);
+        const label = escapeHtml(etiquetaGrupoCorta(groupName));
+        const resps = escapeHtml(responsables);
+        return `<span class="group-pill group-pill--${variant}"><span class="group-pill-label">${label}</span>${resps ? ` <span class="group-pill-resp">${resps}</span>` : ''}</span>`;
+    }
+
+    function htmlBadgeTerritorioSalida(it) {
+        const esPueblo = esTerritorioPueblo(it.t);
+        let cls = 'badge';
+        if (esPueblo) cls += ' badge-pueblo';
+        if (it.m) cls += ' note';
+        if (it.nv) cls += ' danger-border';
+        const num = String(it.t ?? '').trim();
+        const punto = String(it.p ?? '').trim();
+        const gps = String(it.gps ?? '').trim();
+        const lat = it.lat == null ? '' : String(it.lat);
+        const lon = it.lon == null ? '' : String(it.lon);
+        return `<button type="button" class="${cls}" data-territorio="${escapeHtml(num)}" data-punto="${escapeHtml(punto)}" data-gps="${escapeHtml(gps)}" data-lat="${escapeHtml(lat)}" data-lon="${escapeHtml(lon)}" aria-label="Ver mapa del territorio ${escapeHtml(num)}">${escapeHtml(etiquetaTerritorio(it.t, it.desc))}</button>`;
+    }
+
+    function leerLatLonMeta(valor) {
+        if (valor == null || valor === '') return null;
+        if (typeof valor === 'object') {
+            const lat = Number(valor.lat ?? valor.latitude ?? valor.Latitud);
+            const lon = Number(valor.lon ?? valor.lng ?? valor.long ?? valor.Longitud);
+            if (Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0)) return { lat, lon };
+        }
+        if (typeof valor === 'string') {
+            const p = valor.split(/[;,]/).map((x) => Number(String(x).trim().replace(',', '.')));
+            if (p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && !(p[0] === 0 && p[1] === 0)) {
+                return { lat: p[0], lon: p[1] };
+            }
+        }
+        return null;
+    }
+
+    function leerLatLonCampos(lat, lon, gps) {
+        const directo = leerLatLonMeta({ lat, lon });
+        if (directo) return directo;
+        return leerLatLonMeta(gps);
+    }
+
+    async function obtenerMapaMeta() {
+        if (mapaMetaCache) return mapaMetaCache;
+        if (!mapaMetaPromise) {
+            mapaMetaPromise = fetch('../mapa_meta.json', { cache: 'no-store' })
+                .then(async (resp) => {
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    mapaMetaCache = await resp.json();
+                    return mapaMetaCache;
+                })
+                .catch((err) => {
+                    mapaMetaPromise = null;
+                    throw err;
+                });
+        }
+        return mapaMetaPromise;
+    }
+
+    function gpsDeTerritorio(meta, numero) {
+        const num = String(numero ?? '').trim();
+        const gps = meta && meta.gps && typeof meta.gps === 'object' ? meta.gps : {};
+        const directo = leerLatLonMeta(gps[num]);
+        if (directo) return directo;
+        if (num.includes('.')) {
+            const base = num.split('.')[0];
+            return leerLatLonMeta(gps[base]);
+        }
+        return null;
+    }
+
+    function urlMyMapsEmbed(lat, lon, zoom) {
+        const q = new URLSearchParams({
+            mid: MY_MAPS_MID,
+            ll: `${lat},${lon}`,
+            z: String(zoom || 17)
+        });
+        return `https://www.google.com/maps/d/embed?${q.toString()}`;
+    }
+
+    function urlGoogleMapsPin(lat, lon, zoom) {
+        const q = new URLSearchParams({
+            q: `${lat},${lon}`,
+            z: String(zoom || 17),
+            hl: 'es',
+            output: 'embed'
+        });
+        return `https://maps.google.com/maps?${q.toString()}`;
+    }
+
+    function tituloTerritorioModal(numero) {
+        const num = String(numero ?? '').trim();
+        const desc = descripcionTerritorio(num);
+        if (esTerritorioPueblo(num)) {
+            return desc ? `${desc} (T-${num})` : `Pueblo (T-${num})`;
+        }
+        return desc && desc !== num ? `Territorio ${num} · ${desc}` : `Territorio ${num}`;
+    }
+
+    function mostrarMsgMapa(texto, esError) {
+        const iframe = mmMapWrap.querySelector('iframe');
+        if (iframe) iframe.remove();
+        mmMsg.className = 'modal-map-msg' + (esError ? ' error' : '');
+        mmMsg.textContent = texto;
+        mmMsg.hidden = false;
+    }
+
+    function pintarIframeMapa(src) {
+        mmMsg.hidden = true;
+        let iframe = mmMapWrap.querySelector('iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.title = 'Mapa del territorio';
+            iframe.loading = 'lazy';
+            iframe.referrerPolicy = 'no-referrer-when-downgrade';
+            iframe.allowFullscreen = true;
+            mmMapWrap.appendChild(iframe);
+        }
+        iframe.src = src;
+    }
+
+    function centrarMyMapsEn(lat, lon, zoom, subtitulo) {
+        pintarIframeMapa(urlMyMapsEmbed(lat, lon, zoom));
+        if (subtitulo) mmSubtitle.textContent = subtitulo;
+    }
+
+    function centrarPinEncuentro(lat, lon, zoom, subtitulo) {
+        pintarIframeMapa(urlGoogleMapsPin(lat, lon, zoom));
+        if (subtitulo) mmSubtitle.textContent = subtitulo;
+    }
+
+    function cerrarModalMapa(opts) {
+        const fromPopstate = !!(opts && opts.fromPopstate);
+        if (!mapaModal.classList.contains('open')) return;
+        mapaModal.classList.remove('open');
+        mapaModal.setAttribute('aria-hidden', 'true');
+        const iframe = mmMapWrap.querySelector('iframe');
+        if (iframe) iframe.src = 'about:blank';
+        mmSubtitle.textContent = 'Ubicación en el mapa';
+        if (!fromPopstate && mapaHistoryOpen) {
+            mapaHistoryOpen = false;
+            history.back();
+        } else {
+            mapaHistoryOpen = false;
+        }
+    }
+
+    async function abrirModalMapa(numero, extras) {
+        const num = String(numero ?? '').trim();
+        if (!num) return;
+        const puntoTxt = String((extras && extras.punto) || '').trim();
+        const gpsPunto = leerLatLonCampos(
+            extras && extras.lat,
+            extras && extras.lon,
+            extras && extras.gps
+        );
+        mmTitle.textContent = tituloTerritorioModal(num);
+        mmSubtitle.textContent = puntoTxt ? `Punto: ${puntoTxt}` : 'Mapa de Carlos Casares';
+        mostrarMsgMapa('Cargando mapa…', false);
+        if (!mapaModal.classList.contains('open')) {
+            history.pushState({ mapaModal: true }, '');
+            mapaHistoryOpen = true;
+        }
+        mapaModal.classList.add('open');
+        mapaModal.setAttribute('aria-hidden', 'false');
+        try {
+            if (gpsPunto) {
+                const zoom = esTerritorioPueblo(num) ? 15 : 18;
+                const sub = puntoTxt
+                    ? `Punto de encuentro: ${puntoTxt}`
+                    : 'Punto de encuentro';
+                centrarPinEncuentro(gpsPunto.lat, gpsPunto.lon, zoom, sub);
+                return;
+            }
+            const meta = await obtenerMapaMeta();
+            const gps = gpsDeTerritorio(meta, num);
+            if (!gps) {
+                mostrarMsgMapa(
+                    puntoTxt
+                        ? `Sin GPS del punto «${puntoTxt}». Tampoco hay coordenadas del territorio.`
+                        : 'No hay coordenadas para este territorio.',
+                    true
+                );
+                return;
+            }
+            const zoom = esTerritorioPueblo(num) ? 14 : 17;
+            const sub = puntoTxt
+                ? `Territorio (sin GPS del punto «${puntoTxt}»)`
+                : 'Mapa de Carlos Casares';
+            centrarMyMapsEn(gps.lat, gps.lon, zoom, sub);
+        } catch (e) {
+            const msg = (e && e.message) ? e.message : String(e);
+            mostrarMsgMapa('No se pudo cargar el mapa. ' + msg, true);
+        }
+    }
+
+    function fmtDiaMes(isoOrDate) {
+        if (isoOrDate instanceof Date) {
+            return `${isoOrDate.getDate()}/${isoOrDate.getMonth() + 1}`;
+        }
+        const m = String(isoOrDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) return `${Number(m[3])}/${Number(m[2])}`;
+        return '';
+    }
+
+    function mensajeVacio(texto, esError) {
+        root.innerHTML = `<div class="vacio${esError ? ' error' : ''}">${escapeHtml(texto)}</div>`;
+    }
+
+    function render(data) {
+        const desdeTxt = data[0] ? fmtDiaMes(data[0].d) : '';
+        const hastaTxt = data.length ? fmtDiaMes(data[data.length - 1].d) : '';
+        headerText.textContent = (desdeTxt && hastaTxt)
+            ? `Salidas de predicación • ${desdeTxt} al ${hastaTxt}`
+            : 'Salidas de predicación';
+
+        if (!data.length) {
+            mensajeVacio('No hay salidas publicadas.');
+            return;
+        }
+
+        const daysMap = new Map();
+        data.forEach((it) => {
+            const dK = it.d.toDateString();
+            if (!daysMap.has(dK)) daysMap.set(dK, new Map());
+            const tStr = it.d.getHours() + ':' + String(it.d.getMinutes()).padStart(2, '0');
+            const meetKey = tStr + '|' + it.p + '|' + (it.g || '');
+            if (!daysMap.get(dK).has(meetKey)) {
+                daysMap.get(dK).set(meetKey, { time: tStr, place: it.p, items: [] });
+            }
+            daysMap.get(dK).get(meetKey).items.push(it);
+        });
+
+        let html = '';
+        daysMap.forEach((meetings, dayKey) => {
+            const dObj = new Date(dayKey);
+            const dNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+            const isW = dObj.getDay() === 0 || dObj.getDay() === 6;
+
+            html += `<div class="day-block">
+                <div class="day-sidebar ${isW ? 'weekend' : ''}">
+                    <div class="day-num">${dObj.getDate()}</div>
+                    <div class="day-name">${dNames[dObj.getDay()]}</div>
+                </div>
+                <div class="meetings-container">`;
+
+            meetings.forEach((m) => {
+                m.items.sort((a, b) => {
+                    const pa = isNaN(a.pr) ? Number.MAX_SAFE_INTEGER : a.pr;
+                    const pb = isNaN(b.pr) ? Number.MAX_SAFE_INTEGER : b.pr;
+                    return pa - pb;
+                });
+
+                const resps = [...new Set(m.items.map((i) => i.r).filter(Boolean))].join(' / ');
+                const groupName = m.items[0].g;
+                const isCongregacional = !groupName || groupName.toLowerCase() === 'congregacional';
+                const placeCls = isCongregacional ? 'place' : `place place--group-${groupPillVariant(groupName)}`;
+                const tienePueblo = m.items.some((it) => esTerritorioPueblo(it.t));
+                const meetingCls = tienePueblo ? 'meeting meeting--pueblo' : 'meeting';
+                const metaHtml = !isCongregacional
+                    ? htmlGroupBlock(groupName, resps)
+                    : (resps ? `<span class="sub-info">${escapeHtml(resps)}</span>` : '');
+
+                html += `<div class="${meetingCls}">
+                    <div class="row-main">
+                        <div class="time">${escapeHtml(m.time)}</div>
+                        <div class="info-group">
+                            <span class="${placeCls}">${escapeHtml(m.place)}</span>
+                            <div class="meta-row">
+                                ${metaHtml}
+                                <div class="terr-badges">
+                                    ${m.items.map((it) => htmlBadgeTerritorioSalida(it)).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ${m.items.some((i) => i.m) ? `
+                        <div class="alert-box manzanas">
+                            ${m.items.filter((i) => i.m).map((i) => `<div>T-${escapeHtml(i.t)}: ${escapeHtml(i.m)}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${m.items.some((i) => i.nv) ? `
+                        <div class="alert-box no-visitar">
+                            ${m.items.filter((i) => i.nv).map((i) => `<div>T-${escapeHtml(i.t)} NO VISITAR: ${escapeHtml(i.nv)}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>`;
+            });
+            html += '</div></div>';
+        });
+        root.innerHTML = html;
+        root.querySelectorAll('.badge[data-territorio]').forEach((el) => {
+            el.addEventListener('click', () => abrirModalMapa(el.dataset.territorio, {
+                punto: el.dataset.punto || '',
+                gps: el.dataset.gps || '',
+                lat: el.dataset.lat || '',
+                lon: el.dataset.lon || ''
+            }));
+        });
+    }
+
+    function aplicarBundle(bundle) {
+        catalogoDescripciones = Object.assign({}, FALLBACK_DESCRIPCIONES_PUEBLO, bundle.descripciones || {});
+        for (const [num, desc] of Object.entries(catalogoDescripciones)) {
+            const d = String(desc || '').trim();
+            if (d) descripcionPorNumeroMemo[String(num).trim()] = d;
+        }
+        salidasCache = parseRows(bundle.salidas);
+        for (const it of salidasCache) {
+            if (it.desc) descripcionPorNumeroMemo[String(it.t).trim()] = it.desc;
+        }
+    }
+
+    async function cargarDesdeGoogle() {
+        if (cargando) return;
+        if (!window.TerritoriosGoogle || typeof window.TerritoriosGoogle.cargarDatosSemana !== 'function') {
+            headerText.textContent = 'Salidas de predicación';
+            mensajeVacio('No se pudo cargar el módulo de datos.', true);
+            return;
+        }
+        cargando = true;
+        if (!salidasCache.length) mensajeVacio('Cargando salidas…');
+        try {
+            const json = await window.TerritoriosGoogle.cargarDatosSemana();
+            const bundle = normalizarBundle(json);
+            aplicarBundle(bundle);
+            render(salidasCache);
+        } catch (e) {
+            const msg = (e && e.message) ? e.message : String(e);
+            if (!salidasCache.length) {
+                headerText.textContent = 'Salidas de predicación';
+                mensajeVacio('No se pudieron cargar las salidas. ' + msg, true);
+            }
+        } finally {
+            cargando = false;
+        }
+    }
+
+    document.getElementById('mm-cerrar').addEventListener('click', () => cerrarModalMapa());
+    mapaModal.addEventListener('click', (ev) => {
+        if (ev.target === mapaModal) cerrarModalMapa();
+    });
+    document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && mapaModal.classList.contains('open')) cerrarModalMapa();
+    });
+    window.addEventListener('popstate', () => {
+        if (mapaModal.classList.contains('open')) {
+            cerrarModalMapa({ fromPopstate: true });
+        }
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') cargarDesdeGoogle();
+    });
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () {});
+    }
+
+    cargarDesdeGoogle();
+</script>
+</body>
+</html>
+

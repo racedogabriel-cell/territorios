@@ -99,7 +99,10 @@
                 Prioridad: row[5] === '' || row[5] == null ? null : row[5],
                 ManzanasPendientes: row[6] ?? '',
                 Direccion: row[7] ?? '',
-                Descripcion: row[8] ?? ''
+                Descripcion: row[8] ?? '',
+                PuntoEncuentroGps: row[9] ?? '',
+                PuntoEncuentroLat: row[10] ?? '',
+                PuntoEncuentroLon: row[11] ?? ''
             };
         }
         return {
@@ -111,7 +114,10 @@
             Prioridad: row.Prioridad ?? row.prioridad ?? null,
             ManzanasPendientes: row.ManzanasPendientes ?? row.manzanas_pendientes ?? '',
             Direccion: row.Direccion ?? row.direccion ?? '',
-            Descripcion: row.Descripcion ?? row.descripcion ?? ''
+            Descripcion: row.Descripcion ?? row.descripcion ?? '',
+            PuntoEncuentroGps: row.PuntoEncuentroGps ?? row.puntoEncuentroGps ?? row.gps ?? '',
+            PuntoEncuentroLat: row.PuntoEncuentroLat ?? row.puntoEncuentroLat ?? row.lat ?? '',
+            PuntoEncuentroLon: row.PuntoEncuentroLon ?? row.puntoEncuentroLon ?? row.lon ?? row.lng ?? ''
         };
     }
 

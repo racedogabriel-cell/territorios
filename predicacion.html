@@ -14,10 +14,15 @@
             --danger: #cc0000; 
             --bg: #ffffff;
             --k: 1;
-            --group-1-bg: #dbeafe;
-            --group-1-fg: #1565c0;
-            --group-2-bg: #ede7f6;
-            --group-2-fg: #5e35b1;
+            --group-1-bg: #d9e7ff;
+            --group-1-fg: #034cbc;
+            --group-1-accent: #0062ff;
+            --group-2-bg: #e8fad9;
+            --group-2-fg: #4ca604;
+            --group-2-accent: #65e000;
+            --group-3-bg: #fed9e6;
+            --group-3-fg: #b70543;
+            --group-3-accent: #fa0057;
             --group-default-bg: #eef2f6;
             --group-default-fg: #2c3e50;
         }
@@ -249,6 +254,7 @@
 
         .place--group-1 { color: var(--group-1-fg); }
         .place--group-2 { color: var(--group-2-fg); }
+        .place--group-3 { color: var(--group-3-fg); }
         .place--group-default { color: var(--group-default-fg); }
 
         .sub-info {
@@ -264,10 +270,12 @@
             padding: calc(2px * var(--k)) calc(8px * var(--k));
             border-radius: calc(6px * var(--k));
             line-height: 1.2;
+            border-left: calc(4px * var(--k)) solid transparent;
         }
 
-        .group-pill--1 { background: var(--group-1-bg); }
-        .group-pill--2 { background: var(--group-2-bg); }
+        .group-pill--1 { background: var(--group-1-bg); border-left-color: var(--group-1-accent); }
+        .group-pill--2 { background: var(--group-2-bg); border-left-color: var(--group-2-accent); }
+        .group-pill--3 { background: var(--group-3-bg); border-left-color: var(--group-3-accent); }
         .group-pill--default { background: var(--group-default-bg); }
 
         .group-pill-label {
@@ -277,6 +285,7 @@
 
         .group-pill--1 .group-pill-label { color: var(--group-1-fg); }
         .group-pill--2 .group-pill-label { color: var(--group-2-fg); }
+        .group-pill--3 .group-pill-label { color: var(--group-3-fg); }
         .group-pill--default .group-pill-label { color: var(--group-default-fg); }
 
         .group-pill-resp {
@@ -865,7 +874,7 @@
     function groupPillVariant(groupName) {
         const match = String(groupName || '').trim().match(/^grupo\s*(\d+)\b/i);
         if (!match) return 'default';
-        return match[1] === '1' || match[1] === '2' ? match[1] : 'default';
+        return ['1', '2', '3'].includes(match[1]) ? match[1] : 'default';
     }
 
     function htmlGroupBlock(groupName, responsables) {

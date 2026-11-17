@@ -59,6 +59,9 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
 .popup-territorio .btn-rural.activo{border-color:#111;color:#111;background:#f8f9fa}
 .ref-dot{width:8px;height:8px;border-radius:50%;background:#ffeb3b;border:2px solid #d93025;box-shadow:0 0 0 1px rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.3)}
 .ref-dot-wrap{background:transparent!important;border:0!important}
+.punto-encuentro-dot{width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,.25),0 1px 4px rgba(0,0,0,.35)}
+.punto-encuentro-dot.sel{border-color:#d93025;box-shadow:0 0 0 2px rgba(217,48,37,.28),0 1px 4px rgba(0,0,0,.35);background:#ffeb3b}
+.punto-encuentro-wrap{background:transparent!important;border:0!important}
 .popup-ref-del{border:1px solid #d93025;background:#fff;color:#b3261e;border-radius:4px;padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer}
 .popup-ref-del:hover{background:#fdecea}
 .popup-territorio .alerta{border:2px solid;border-radius:4px;padding:8px 10px;line-height:1.35;margin:8px 0 0}
@@ -97,10 +100,31 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
 #modalAsignar select[multiple],#modalAsignar select[size]{height:auto;min-height:90px}
 #modalAsignar .lista{border:1px solid #dadce0;border-radius:4px;background:#fff;height:100px;overflow:auto}
 #modalAsignar .lista .item{padding:4px 8px;cursor:pointer;border-bottom:1px solid #f1f3f4;display:flex;align-items:center;gap:6px;justify-content:space-between}
+#modalAsignar .lista .item>span:first-child{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #modalAsignar .lista .item:hover{background:#f1f3f4}
 #modalAsignar .lista .item.sel{background:#e8f0fe;color:#1967d2}
+#modalAsignar .lista .item .item-actions{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
 #modalAsignar .lista .item .del{color:#d93025;cursor:pointer;padding:0 4px;border-radius:3px;font-weight:700}
 #modalAsignar .lista .item .del:hover{background:#fde7e7}
+#modalAsignar .lista .item .gps-miss{color:#e37400;cursor:pointer;padding:1px 6px;border-radius:3px;font-weight:700;font-size:10px;border:1px solid #f9ab00;background:#fff8e1;letter-spacing:.2px}
+#modalAsignar .lista .item .gps-miss:hover{background:#fff3cd}
+#modalAsignar .lista .item .gps-ok{color:#188038;font-size:11px;padding:0 2px;cursor:default;opacity:.85}
+#modalGpsEsquina{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:12050}
+#modalGpsEsquina.abierto{display:flex}
+#modalGpsEsquina .card{width:min(720px,96vw);height:min(620px,92vh);background:#fff;border-radius:8px;box-shadow:0 10px 35px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+#modalGpsEsquina .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #e1e3e1;background:#f8f9fa}
+#modalGpsEsquina .head h3{margin:0;font-size:14px;color:#202124}
+#modalGpsEsquina .head .sub{margin-left:auto;font-size:12px;color:#5f6368}
+#modalGpsEsquina .hint{padding:8px 12px;font-size:12px;color:#3c4043;background:#eef4ff;border-bottom:1px solid #d2e3fc}
+#modalGpsEsquina .body{flex:1 1 auto;min-height:280px;background:#eef2f7;position:relative}
+#mapGpsEsquina{width:100%;height:100%;min-height:280px;background:#e8eaed}
+#modalGpsEsquina .foot{padding:10px 12px;border-top:1px solid #e1e3e1;display:flex;gap:8px;justify-content:flex-end;align-items:center;background:#fafafa}
+#modalGpsEsquina .foot .coords{margin-right:auto;font-size:12px;color:#5f6368}
+#modalGpsEsquina .btn{border:1px solid #dadce0;background:#fff;color:#1a73e8;border-radius:4px;padding:6px 12px;font-weight:600;cursor:pointer}
+#modalGpsEsquina .btn:hover{background:#f1f3f4}
+#modalGpsEsquina .btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8}
+#modalGpsEsquina .btn.primary:hover{background:#1557b0}
+#modalGpsEsquina .btn.primary:disabled{opacity:.45;cursor:not-allowed}
 #modalAsignar .btn{border:1px solid #dadce0;background:#fff;color:#1a73e8;border-radius:4px;padding:6px 12px;font-weight:600;cursor:pointer}
 #modalAsignar .btn:hover{background:#f1f3f4}
 #modalAsignar .btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8}
@@ -149,6 +173,41 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
 .decision-modal .btn:hover{background:#f1f3f4}
 .decision-modal .btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8}
 .decision-modal .btn.primary:hover{background:#1557b0}
+#modalS13Anio select{font:inherit;padding:6px 8px;border:1px solid #dadce0;border-radius:4px;width:100%;box-sizing:border-box;margin-top:4px}
+#vistaS13{position:fixed;inset:0;background:#5f6368;z-index:12000;display:none;flex-direction:column}
+#vistaS13.abierto{display:flex}
+#vistaS13 .barra{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-bottom:1px solid #dadce0;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+#vistaS13 .barra h2{margin:0;font-size:14px;color:#202124}
+#vistaS13 .barra .meta{margin-left:auto;font-size:12px;color:#5f6368}
+#vistaS13 .barra .btn{border:1px solid #dadce0;background:#fff;color:#1a73e8;border-radius:4px;padding:6px 12px;font-weight:600;cursor:pointer}
+#vistaS13 .barra .btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8}
+#vistaS13 .scroll{flex:1 1 auto;overflow:auto;padding:16px;background:#5f6368}
+#vistaS13 .hoja{width:min(1100px,100%);margin:0 auto 18px;background:#fff;color:#111;box-shadow:0 2px 10px rgba(0,0,0,.25);padding:14px 16px 10px;box-sizing:border-box;page-break-after:always}
+#vistaS13 .hoja:last-child{page-break-after:auto;margin-bottom:0}
+#vistaS13 .s13-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:8px;border-bottom:2px solid #111;padding-bottom:6px}
+#vistaS13 .s13-title{font-size:15px;font-weight:800;letter-spacing:.2px;margin:0}
+#vistaS13 .s13-cong{font-size:12px;margin:2px 0 0;font-weight:600}
+#vistaS13 .s13-anio{font-size:12px;font-weight:700;white-space:nowrap}
+#vistaS13 table.s13{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px;line-height:1.25}
+#vistaS13 table.s13 th,#vistaS13 table.s13 td{border:1px solid #111;padding:3px 4px;vertical-align:top}
+#vistaS13 table.s13 th{background:#f3f3f3;font-weight:700;text-align:center}
+#vistaS13 table.s13 .num{width:7%;text-align:center;font-weight:700}
+#vistaS13 table.s13 .ult{width:11%;text-align:center;white-space:pre-line}
+#vistaS13 table.s13 .ciclo{width:20.5%}
+#vistaS13 table.s13 .sub{display:grid;grid-template-columns:1.3fr .85fr .85fr;gap:0;min-height:34px}
+#vistaS13 table.s13 .sub>div{padding:2px 3px;border-right:1px solid #bbb;white-space:pre-line;word-break:break-word}
+#vistaS13 table.s13 .sub>div:last-child{border-right:0}
+#vistaS13 table.s13 .subhead{display:grid;grid-template-columns:1.3fr .85fr .85fr;gap:0;font-size:9px;font-weight:700;text-align:center;margin-bottom:2px}
+#vistaS13 .s13-foot{margin-top:8px;font-size:9px;color:#333;border-top:1px solid #111;padding-top:6px;display:flex;justify-content:space-between;gap:10px}
+@media print{
+  body *{visibility:hidden!important}
+  #vistaS13,#vistaS13 *{visibility:visible!important}
+  #vistaS13{position:static!important;display:block!important;background:#fff!important;inset:auto!important}
+  #vistaS13 .barra{display:none!important}
+  #vistaS13 .scroll{padding:0!important;overflow:visible!important;background:#fff!important}
+  #vistaS13 .hoja{width:100%!important;margin:0!important;box-shadow:none!important;page-break-after:always}
+  #vistaS13 .hoja:last-child{page-break-after:auto}
+}
 .no-visitar-modal .card{width:min(560px,94vw)}
 .no-visitar-lista{max-height:200px;overflow:auto;border:1px solid #dadce0;border-radius:6px;background:#fff;margin-bottom:10px}
 .no-visitar-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:1px solid #f1f3f4}
@@ -179,6 +238,7 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
   <button id="btnSalidas" class="btn-top" type="button">Ver salidas</button>
   <button id="btnReferencias" class="btn-top" type="button">Referencias</button>
   <button id="btnLimpiarCampana" class="btn-top" type="button">Limpiar campaña</button>
+  <button id="btnS13" class="btn-top" type="button" title="Genera el Registro de asignación de territorio (S-13) desde el Historial de Access.">S-13</button>
   <button id="btnRecibirGoogle" class="btn-top" type="button" title="Descarga el paquete semanal desde Google Sheets y aplica salidas en Access; luego importa acciones pendientes. Requiere servir.ps1 y google/google.js.">Recibir de Google</button>
   <button id="btnSyncGoogle" class="btn-top" type="button" title="Publica en Google Sheets el paquete semanal (salidas + mapaSemanal para GitHub Pages). Requiere servir.ps1 y Apps Script.">Enviar a Google</button>
   <span id="syncGoogleMsg" title="Estado de sincronizacion con Google Sheets" style="font-size:11px;font-weight:600;color:#5f6368;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -321,6 +381,22 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
     </div>
   </div>
 </div>
+<div id="modalGpsEsquina" role="dialog" aria-modal="true" aria-labelledby="gpsEsquinaTitulo">
+  <div class="card">
+    <div class="head">
+      <h3 id="gpsEsquinaTitulo">Marcar punto GPS</h3>
+      <span id="gpsEsquinaSub" class="sub"></span>
+      <button class="btn" id="gpsEsquinaCerrar" type="button">Cerrar</button>
+    </div>
+    <div class="hint">Tocá el mapa para ubicar el punto de encuentro. Podés arrastrar el marcador para ajustar.</div>
+    <div class="body"><div id="mapGpsEsquina"></div></div>
+    <div class="foot">
+      <span id="gpsEsquinaCoords" class="coords">Sin punto marcado</span>
+      <button class="btn" id="gpsEsquinaCancelar" type="button">Cancelar</button>
+      <button class="btn primary" id="gpsEsquinaConfirmar" type="button" disabled>Guardar GPS</button>
+    </div>
+  </div>
+</div>
 <div id="modalDecisionHistorial" class="decision-modal" aria-hidden="true">
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="decHistTitle">
     <div id="decHistTitle" class="title">Guardar Historial</div>
@@ -388,6 +464,27 @@ header h1{font-size:16px;margin:0;font-weight:600;color:#202124}.btn-top{border:
     </div>
   </div>
 </div>
+<div id="modalS13Anio" class="decision-modal" aria-hidden="true">
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="s13AnioTitle">
+    <div id="s13AnioTitle" class="title">Registro S-13</div>
+    <div class="msg">Elegí el año de servicio (septiembre–agosto).</div>
+    <label for="s13AnioSelect" style="font-size:12px;font-weight:600;color:#3c4043">Año de servicio</label>
+    <select id="s13AnioSelect"></select>
+    <div class="actions" style="margin-top:12px">
+      <button type="button" class="btn" id="s13AnioCancelar">Cancelar</button>
+      <button type="button" class="btn primary" id="s13AnioGenerar">Generar</button>
+    </div>
+  </div>
+</div>
+<div id="vistaS13" aria-hidden="true">
+  <div class="barra">
+    <h2>S-13 — Registro de asignación</h2>
+    <span id="s13VistaMeta" class="meta"></span>
+    <button type="button" class="btn primary" id="s13ExportPdf">Exportar a PDF</button>
+    <button type="button" class="btn" id="s13CerrarVista">Cerrar</button>
+  </div>
+  <div class="scroll" id="s13Contenido"></div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="google/google.js"></script>
 <script>
@@ -410,6 +507,12 @@ let MAPA_MODAL=null;
 let CAPA_MODAL=null;
 let MAPA_ASG=null;
 let CAPA_ASG=null;
+let MARKER_ASG_PUNTO=null;
+let CAPA_PUNTOS_ENCUENTRO=null;
+let MAPA_GPS_ESQ=null;
+let CAPA_GPS_ESQ=null;
+let MARKER_GPS_ESQ=null;
+const GPS_ESQ_PICK={open:false,mode:null,id1:0,id2:0,texto:'',lat:null,lon:null,resolve:null,reject:null};
 let satelitalActual=null;
 let CAPA_SAT_BASE_MAIN=null;
 let CAPA_SAT_LABELS_MAIN=null;
@@ -511,6 +614,9 @@ async function obtenerDatos(){
         fechaAsignado:t.fechaAsignado,
         enviado:t.enviado??t.Enviado??t.fechaEnviado??t.FechaEnviado??null,
         puntoEncuentro:t.puntoEncuentro??t.PuntosDeEncuentros??t.puntosDeEncuentros??null,
+        puntoEncuentroGps:t.puntoEncuentroGps??t.gpsPuntoEncuentro??null,
+        puntoEncuentroLat:t.puntoEncuentroLat??null,
+        puntoEncuentroLon:t.puntoEncuentroLon??null,
         responsables:t.responsables,
         grupo:t.grupo,
         manzanasPendientes:t.manzanasPendientes,
@@ -606,7 +712,7 @@ function metaManzanasPendientes(info){
   const diasInc=f0?Math.max(0,Math.floor((fechaObjetivoMora().getTime()-f0.getTime())/86400000)):null;
   const fechaBase=fmtFechaLarga(info.fechaManzanasPendientes)||'fecha no informada';
   const incompletoFecha=`${fechaBase}${diasInc!=null?` (${diasInc} dias)`:''}`;
-  const encargado=String(info.ultimoEncargado||'').trim();
+  const encargado=String(info.ultimoEncargado||'').trim().replace(/\r\n|\n|\r/g,'\n');
   return{texto,incompletoFecha,encargado};
 }
 function htmlManzanasPendientes(numero,info,{editable=true,tituloSuffix=''}={}){
@@ -617,10 +723,11 @@ function htmlManzanasPendientes(numero,info,{editable=true,tituloSuffix=''}={}){
     ? ' role="button" tabindex="0" data-numero="'+escapeHtml(numero)+'" title="Click para editar"'
     : '';
   const hint=editable?'<span class="hint-editar">Click para editar</span>':'';
+  const encHtml=escapeHtml(meta.encargado||'no informado').replace(/\n/g,'<br>');
   return '<div class="'+cls+'"'+attrs+'>'+
     '<span class="ttl">Manzanas incompletas pendientes'+tituloSuffix+'</span>'+
     '<span>'+escapeHtml(meta.texto)+'</span>'+
-    '<span class="meta">Último encargado: '+escapeHtml(meta.encargado||'no informado')+' · Fecha: '+escapeHtml(meta.incompletoFecha)+'</span>'+
+    '<span class="meta">Último encargado: '+encHtml+' · Fecha: '+escapeHtml(meta.incompletoFecha)+'</span>'+
     hint+
     '</div>';
 }
@@ -999,8 +1106,96 @@ async function guardarPredeterminadosEnAccess(cfg){
   llenarCalles();
   refrescarAbmUi();
 }
-async function cargarEsquinas(){const cont=document.getElementById('asgEsquinas');cont.innerHTML='<div style="padding:8px;color:#888">Cargando…</div>';try{const r=await fetch('/api/esquinas/'+encodeURIComponent(ASG.numero),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);ASG.esquinas=arrayDesdeApi(await r.json())}catch(e){ASG.esquinas=[];cont.innerHTML=`<div style="padding:8px;color:#d93025">Error: ${escapeHtml(e.message)}</div>`;return}renderEsquinas()}
-function actualizarLeyendaPuntoSel(_txt){return}
+function normalizarClavePuntoTxt(txt){
+  const t=String(txt||'').trim().toLowerCase().replace(/\s+/g,' ');
+  if(!t)return'';
+  const m=t.match(/^(.+?)\s+y\s+(.+)$/);
+  if(!m)return t;
+  const a=m[1].trim(),b=m[2].trim();
+  return a<b?`${a}|${b}`:`${b}|${a}`;
+}
+async function cargarEsquinas(){
+  const cont=document.getElementById('asgEsquinas');
+  cont.innerHTML='<div style="padding:8px;color:#888">Cargando…</div>';
+  try{
+    const r=await fetch('/api/esquinas/'+encodeURIComponent(ASG.numero),{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    ASG.esquinas=arrayDesdeApi(await r.json());
+  }catch(e){
+    ASG.esquinas=[];
+    cont.innerHTML=`<div style="padding:8px;color:#d93025">Error: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  const info=infoPorClaveTerritorio(ASG.numero)||{};
+  const claveAsignado=normalizarClavePuntoTxt(info.puntoEncuentro);
+  if(claveAsignado){
+    const idx=ASG.esquinas.findIndex((e)=>normalizarClavePuntoTxt(e.texto)===claveAsignado);
+    if(idx>=0){
+      ASG.puntoSel={id1:ASG.esquinas[idx].id1,id2:ASG.esquinas[idx].id2};
+      ASG.puntoSelTexto=ASG.esquinas[idx].texto;
+    }
+  }
+  renderEsquinas();
+}
+function actualizarLeyendaPuntoSel(_txt){actualizarMarcadorPuntoAsignar();return}
+function iconoPuntoEncuentro(opts={}){
+  const sel=!!opts.selected;
+  return L.divIcon({
+    className:'punto-encuentro-wrap',
+    html:`<div class="punto-encuentro-dot${sel?' sel':''}" title="Punto de encuentro"></div>`,
+    iconSize:[12,12],
+    iconAnchor:[6,6]
+  });
+}
+function leerGpsPuntoEncuentroInfo(info){
+  if(!info)return null;
+  return leerLatLonEsquina({
+    lat:info.puntoEncuentroLat,
+    lon:info.puntoEncuentroLon,
+    gps:info.puntoEncuentroGps
+  });
+}
+function actualizarMarcadorPuntoAsignar(){
+  if(!MAPA_ASG||!CAPA_ASG)return;
+  if(MARKER_ASG_PUNTO){
+    try{CAPA_ASG.removeLayer(MARKER_ASG_PUNTO)}catch(_){}
+    try{MAPA_ASG.removeLayer(MARKER_ASG_PUNTO)}catch(_){}
+    MARKER_ASG_PUNTO=null;
+  }
+  const e=ASG.puntoSel&&ASG.esquinas?ASG.esquinas.find((x)=>Number(x.id1)===Number(ASG.puntoSel.id1)&&Number(x.id2)===Number(ASG.puntoSel.id2)):null;
+  const gps=leerLatLonEsquina(e);
+  if(!gps)return;
+  MARKER_ASG_PUNTO=L.marker([gps.lat,gps.lon],{
+    icon:iconoPuntoEncuentro({selected:true}),
+    keyboard:false,
+    zIndexOffset:800
+  }).addTo(CAPA_ASG);
+  MARKER_ASG_PUNTO.bindTooltip(ASG.puntoSelTexto||'Punto de encuentro',{direction:'top',offset:[0,-8]});
+}
+function renderPuntosEncuentroMapaPrincipal(){
+  if(!MAPA)return;
+  if(!MAPA.getPane('puntosEncuentroPane')){
+    const p=MAPA.createPane('puntosEncuentroPane');
+    if(p)p.style.zIndex='640';
+  }
+  if(!CAPA_PUNTOS_ENCUENTRO)CAPA_PUNTOS_ENCUENTRO=L.layerGroup().addTo(MAPA);
+  CAPA_PUNTOS_ENCUENTRO.clearLayers();
+  const dict=(DATOS&&typeof DATOS==='object')?DATOS:{};
+  for(const [numero,info] of Object.entries(dict)){
+    if(!info||!info.abiertoCerrado)continue;
+    const gps=leerGpsPuntoEncuentroInfo(info);
+    if(!gps)continue;
+    const txt=String(info.puntoEncuentro||'Punto de encuentro').trim()||'Punto de encuentro';
+    const m=L.marker([gps.lat,gps.lon],{
+      icon:iconoPuntoEncuentro({selected:false}),
+      keyboard:false,
+      pane:'puntosEncuentroPane',
+      zIndexOffset:500
+    }).addTo(CAPA_PUNTOS_ENCUENTRO);
+    m.bindTooltip(`T${numero}: ${txt}`,{direction:'top',offset:[0,-8]});
+  }
+  if(CAPA_PUNTOS_ENCUENTRO.bringToFront)CAPA_PUNTOS_ENCUENTRO.bringToFront();
+}
 function actualizarAvisoManzanasPendientes(){
   const box=document.getElementById('asgAvisoManzanas');
   if(!box)return;
@@ -1018,7 +1213,7 @@ function actualizarAvisoManzanasPendientes(){
   }
   box.innerHTML=
     `<span class="ttl">Manzanas incompletas pendientes:</span>${escapeHtml(meta.texto)}`+
-    `<span class="meta">Último encargado: ${escapeHtml(meta.encargado||'no informado')} · Fecha: ${escapeHtml(meta.incompletoFecha)}</span>`+
+    `<span class="meta">Último encargado: ${escapeHtml(meta.encargado||'no informado').replace(/\n/g,'<br>')} · Fecha: ${escapeHtml(meta.incompletoFecha)}</span>`+
     `<span class="hint-editar">Click para editar</span>`;
   box.classList.add('alerta-manzanas-editable');
   box.dataset.numero=String(ASG.numero);
@@ -1104,6 +1299,32 @@ function actualizarAvisoNoVisitar(){
     list.map((it)=>{const f=fmtFechaNoVisitar(it.fechaRegistro)||'fecha no informada';return `<span class="meta">${escapeHtml(it.direccion)} · Fecha: ${escapeHtml(f)}</span>`}).join('');
   box.style.display='block';
 }
+function leerLatLonEsquina(e){
+  if(!e||typeof e!=='object')return null;
+  // Number(null)===0 en JS: no tratar null/undefined/'' como GPS válido.
+  if(e.lat==null||e.lon==null||e.lat===''||e.lon===''){
+    const raw=String(e.gps||'').trim();
+    if(!raw)return null;
+    const parts=raw.split(/[,;\s]+/).filter(Boolean);
+    if(parts.length<2)return null;
+    const lat=Number(parts[0]),lon=Number(parts[1]);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+    if(lat===0&&lon===0)return null;
+    return{lat,lon};
+  }
+  const lat=Number(e.lat),lon=Number(e.lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+  if(lat===0&&lon===0)return null;
+  return{lat,lon};
+}
+function esquinaTieneGps(e){return !!leerLatLonEsquina(e)}
+function formatoGpsApi(lat,lon){
+  if(lat==null||lon==null||lat===''||lon==='')return null;
+  const a=Number(lat),b=Number(lon);
+  if(!Number.isFinite(a)||!Number.isFinite(b))return null;
+  if(a===0&&b===0)return null;
+  return{lat:a,lon:b,gps:`${a},${b}`};
+}
 function renderEsquinas(){
   const cont=document.getElementById('asgEsquinas');
   if(!ASG.esquinas.length){
@@ -1122,15 +1343,57 @@ function renderEsquinas(){
 
   cont.innerHTML=ASG.esquinas.map((e,i)=>{
     const sel=i===idxSel;
-    return `<div class="item${sel?' sel':''}" data-i="${i}"><span>${escapeHtml(e.texto)}</span><span class="del" title="Eliminar esquina" data-i="${i}">✕</span></div>`;
+    const tieneGps=esquinaTieneGps(e);
+    const gpsBtn=tieneGps
+      ?`<span class="gps-ok" title="GPS cargado${e.gps?': '+escapeHtml(String(e.gps)):''}">📍</span>`
+      :`<span class="gps-miss" title="Sin GPS — clic para marcar en el mapa" data-i="${i}">Sin GPS</span>`;
+    return `<div class="item${sel?' sel':''}" data-i="${i}"><span>${escapeHtml(e.texto)}</span><span class="item-actions">${gpsBtn}<span class="del" title="Eliminar esquina" data-i="${i}">✕</span></span></div>`;
   }).join('');
   cont.querySelectorAll('.item').forEach((el)=>{
-    el.addEventListener('click',(ev)=>{if(ev.target.classList.contains('del'))return;const i=Number(el.dataset.i);seleccionarEsquina(i)});
-    el.querySelector('.del').addEventListener('click',(ev)=>{ev.stopPropagation();eliminarEsquina(Number(el.dataset.i))});
+    el.addEventListener('click',(ev)=>{
+      if(ev.target.classList.contains('del')||ev.target.classList.contains('gps-miss'))return;
+      seleccionarEsquina(Number(el.dataset.i));
+    });
+    const del=el.querySelector('.del');
+    if(del)del.addEventListener('click',(ev)=>{ev.stopPropagation();eliminarEsquina(Number(el.dataset.i))});
+    const miss=el.querySelector('.gps-miss');
+    if(miss)miss.addEventListener('click',(ev)=>{ev.stopPropagation();completarGpsEsquina(Number(el.dataset.i))});
   });
 }
 function seleccionarEsquina(i){const e=ASG.esquinas[i];if(!e)return;ASG.puntoSel={id1:e.id1,id2:e.id2};ASG.puntoSelTexto=e.texto;actualizarLeyendaPuntoSel(e.texto);renderEsquinas()}
 async function eliminarEsquina(i){const e=ASG.esquinas[i];if(!e)return;if(!confirm('¿Eliminar esta esquina?\n'+e.texto))return;try{const r=await fetch('/api/esquinas',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero:String(ASG.numero),id1:e.id1,id2:e.id2})});if(!r.ok)throw new Error('HTTP '+r.status);ASG.esquinas=arrayDesdeApi(await r.json());if(ASG.puntoSel&&ASG.puntoSel.id1===e.id1&&ASG.puntoSel.id2===e.id2){ASG.puntoSel=null;ASG.puntoSelTexto='';actualizarLeyendaPuntoSel('')}renderEsquinas()}catch(err){alert('Error al eliminar: '+err.message)}}
+async function completarGpsEsquina(i){
+  const e=ASG.esquinas[i];
+  if(!e)return;
+  try{
+    const actual=leerLatLonEsquina(e);
+    const pick=await pedirGpsEsquinaEnMapa({
+      mode:'update',
+      id1:e.id1,
+      id2:e.id2,
+      texto:e.texto,
+      lat:actual?actual.lat:null,
+      lon:actual?actual.lon:null
+    });
+    if(!pick)return;
+    const r=await fetch('/api/esquinas/gps',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({numero:String(ASG.numero),id1:e.id1,id2:e.id2,lat:pick.lat,lon:pick.lon,gps:pick.gps})
+    });
+    const texto=await r.text();
+    let payload;try{payload=texto?JSON.parse(texto):null}catch(_){payload=null}
+    if(!r.ok){
+      const det=(payload&&payload.error)?String(payload.error):texto.slice(0,220);
+      throw new Error('HTTP '+r.status+(det?': '+det:''));
+    }
+    ASG.esquinas=arrayDesdeApi(payload);
+    renderEsquinas();
+  }catch(err){
+    if(err&&err.cancelled)return;
+    alert('Error al guardar GPS: '+err.message);
+  }
+}
 async function agregarEsquinaDesdeSelecc(){
   let nt=numeroTerritorioCanonicoDesdeDatos(ASG.numero);
   if(!nt)nt=numeroTerritorioCanonicoDesdeDatos(document.getElementById('asgTitulo')?.textContent?.replace(/^[\s\S]*?N°\s*/i,'').trim());
@@ -1143,9 +1406,14 @@ async function agregarEsquinaDesdeSelecc(){
   if(idA&&idB&&idA===idB){alert('No puede ser la misma calle en ambos listados.');return}
   const id1=idA||idB;
   const id2=(idA&&idB)?idB:0;
+  const nombreH=selH.selectedOptions&&selH.selectedOptions[0]?selH.selectedOptions[0].textContent:'';
+  const nombreV=selV.selectedOptions&&selV.selectedOptions[0]?selV.selectedOptions[0].textContent:'';
+  const textoPunto=(idA&&idB)?`${nombreH} y ${nombreV}`:(nombreH||nombreV||'Punto de encuentro');
   const mismoPar=(e,a,b)=>{const x1=Number(e.id1),x2=Number(e.id2);return(x1===a&&x2===b)||(x1===b&&x2===a)};
   try{
-    const r=await fetch('/api/esquinas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero:nt,id1,id2})});
+    const pick=await pedirGpsEsquinaEnMapa({mode:'create',id1,id2,texto:textoPunto});
+    if(!pick)return;
+    const r=await fetch('/api/esquinas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero:nt,id1,id2,lat:pick.lat,lon:pick.lon,gps:pick.gps})});
     const texto=await r.text();
     let payload;
     try{payload=texto?JSON.parse(texto):null}catch(_){payload=null}
@@ -1156,7 +1424,166 @@ async function agregarEsquinaDesdeSelecc(){
     ASG.esquinas=arrayDesdeApi(payload);
     const nueva=ASG.esquinas.find((e)=>mismoPar(e,id1,id2));
     if(nueva){seleccionarEsquina(ASG.esquinas.indexOf(nueva))}else{renderEsquinas()}
-  }catch(err){alert('Error al agregar esquina: '+err.message)}
+  }catch(err){
+    if(err&&err.cancelled)return;
+    alert('Error al agregar esquina: '+err.message);
+  }
+}
+function iconoMarcadorGpsEsquina(){
+  return L.divIcon({
+    className:'ref-dot-wrap',
+    html:'<div class="ref-dot" style="width:12px;height:12px;border-width:2px"></div>',
+    iconSize:[12,12],
+    iconAnchor:[6,6]
+  });
+}
+function actualizarCoordsGpsEsquinaUi(){
+  const el=document.getElementById('gpsEsquinaCoords');
+  const btn=document.getElementById('gpsEsquinaConfirmar');
+  if(!el||!btn)return;
+  if(Number.isFinite(GPS_ESQ_PICK.lat)&&Number.isFinite(GPS_ESQ_PICK.lon)){
+    el.textContent=`Lat ${GPS_ESQ_PICK.lat.toFixed(6)} · Lon ${GPS_ESQ_PICK.lon.toFixed(6)}`;
+    btn.disabled=false;
+  }else{
+    el.textContent='Sin punto marcado';
+    btn.disabled=true;
+  }
+}
+function setMarcadorGpsEsquina(latlng,opts={}){
+  if(!MAPA_GPS_ESQ||!latlng)return;
+  GPS_ESQ_PICK.lat=latlng.lat;
+  GPS_ESQ_PICK.lon=latlng.lng;
+  if(MARKER_GPS_ESQ){
+    MARKER_GPS_ESQ.setLatLng(latlng);
+  }else{
+    MARKER_GPS_ESQ=L.marker(latlng,{draggable:true,icon:iconoMarcadorGpsEsquina(),keyboard:false}).addTo(MAPA_GPS_ESQ);
+    MARKER_GPS_ESQ.on('dragend',(ev)=>{
+      const ll=ev.target.getLatLng();
+      GPS_ESQ_PICK.lat=ll.lat;
+      GPS_ESQ_PICK.lon=ll.lng;
+      actualizarCoordsGpsEsquinaUi();
+    });
+  }
+  if(opts.pan)MAPA_GPS_ESQ.panTo(latlng);
+  actualizarCoordsGpsEsquinaUi();
+}
+function asegurarMapaGpsEsquina(){
+  if(MAPA_GPS_ESQ)return;
+  MAPA_GPS_ESQ=L.map('mapGpsEsquina',{zoomControl:true,attributionControl:false,doubleClickZoom:false,scrollWheelZoom:true,worldCopyJump:false,preferCanvas:false});
+  if(!MAPA_GPS_ESQ.getPane('gpsCallesPane')){
+    const p=MAPA_GPS_ESQ.createPane('gpsCallesPane');
+    if(p){p.style.zIndex='550';p.style.pointerEvents='none'}
+  }
+  L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&hl=es&x={x}&y={y}&z={z}',{
+    subdomains:GOOGLE_TILE_SUBS,
+    attribution:'© Google',
+    maxZoom:21,
+    maxNativeZoom:20,
+    detectRetina:true,
+    opacity:.55,
+    pane:'tilePane'
+  }).addTo(MAPA_GPS_ESQ);
+  L.tileLayer(urlTileGoogleSoloNombresCalles(),{
+    subdomains:GOOGLE_TILE_SUBS,
+    attribution:'© Google',
+    maxZoom:21,
+    maxNativeZoom:20,
+    detectRetina:true,
+    opacity:1,
+    className:'capa-rotulos capa-rotulos-google',
+    pane:'gpsCallesPane'
+  }).addTo(MAPA_GPS_ESQ);
+  MAPA_GPS_ESQ.on('click',(ev)=>{setMarcadorGpsEsquina(ev.latlng)});
+}
+function parseLatLonOpcional(lat,lon){
+  if(lat==null||lon==null||lat===''||lon==='')return null;
+  const a=Number(lat),b=Number(lon);
+  if(!Number.isFinite(a)||!Number.isFinite(b))return null;
+  if(a===0&&b===0)return null;
+  if(a<-90||a>90||b<-180||b>180)return null;
+  return{lat:a,lon:b};
+}
+function cerrarModalGpsEsquina(resultado){
+  const modal=document.getElementById('modalGpsEsquina');
+  if(modal)modal.classList.remove('abierto');
+  GPS_ESQ_PICK.open=false;
+  const resolve=GPS_ESQ_PICK.resolve;
+  const reject=GPS_ESQ_PICK.reject;
+  GPS_ESQ_PICK.resolve=null;
+  GPS_ESQ_PICK.reject=null;
+  GPS_ESQ_PICK.mode=null;
+  GPS_ESQ_PICK.lat=null;
+  GPS_ESQ_PICK.lon=null;
+  if(resultado&&resolve)resolve(resultado);
+  else if(reject){
+    const err=new Error('cancelled');
+    err.cancelled=true;
+    reject(err);
+  }
+}
+function pedirGpsEsquinaEnMapa(opts={}){
+  if(GPS_ESQ_PICK.open)return Promise.reject(new Error('Ya hay un marcador GPS abierto.'));
+  return new Promise((resolve,reject)=>{
+    (async()=>{
+      GPS_ESQ_PICK.open=true;
+      GPS_ESQ_PICK.mode=opts.mode||'create';
+      GPS_ESQ_PICK.id1=Number(opts.id1)||0;
+      GPS_ESQ_PICK.id2=Number(opts.id2)||0;
+      GPS_ESQ_PICK.texto=String(opts.texto||'');
+      const inicial=parseLatLonOpcional(opts.lat,opts.lon);
+      GPS_ESQ_PICK.lat=inicial?inicial.lat:null;
+      GPS_ESQ_PICK.lon=inicial?inicial.lon:null;
+      GPS_ESQ_PICK.resolve=resolve;
+      GPS_ESQ_PICK.reject=reject;
+      const titulo=document.getElementById('gpsEsquinaTitulo');
+      const sub=document.getElementById('gpsEsquinaSub');
+      if(titulo)titulo.textContent=GPS_ESQ_PICK.mode==='update'?'Completar GPS del punto':'Marcar GPS del nuevo punto';
+      if(sub)sub.textContent=GPS_ESQ_PICK.texto||`Territorio N° ${ASG.numero||''}`;
+      document.getElementById('modalGpsEsquina').classList.add('abierto');
+      await esperarLayout();
+      asegurarMapaGpsEsquina();
+      if(CAPA_GPS_ESQ)MAPA_GPS_ESQ.removeLayer(CAPA_GPS_ESQ);
+      CAPA_GPS_ESQ=L.layerGroup().addTo(MAPA_GPS_ESQ);
+      if(MARKER_GPS_ESQ){try{MAPA_GPS_ESQ.removeLayer(MARKER_GPS_ESQ)}catch(_){}MARKER_GPS_ESQ=null}
+      recalcularGeometriasAjustadas();
+      const keySel=String(ASG.numero||'').trim().replace(',','.');
+      let polySel=null;
+      const polys=[];
+      for(const territorio of TERRITORIOS){
+        const sel=String(territorio.numero)===keySel;
+        const p=dibujarTerritorio(CAPA_GPS_ESQ,territorio,{selected:sel,modal:true,abrirEnClick:false,mostrarEtiqueta:true});
+        polys.push(p);
+        if(sel)polySel=p;
+      }
+      MAPA_GPS_ESQ.invalidateSize(true);
+      await esperarLayout();
+      MAPA_GPS_ESQ.invalidateSize(true);
+      if(polySel&&polySel.getBounds&&polySel.getBounds().isValid()){
+        MAPA_GPS_ESQ.fitBounds(polySel.getBounds(),{padding:[28,28],maxZoom:18});
+      }else if(polys.length){
+        const b=L.featureGroup(polys).getBounds();
+        if(b&&b.isValid())MAPA_GPS_ESQ.fitBounds(b,{padding:[20,20],maxZoom:16});
+      }else{
+        const fallback=leerLatLon(META.gps&&META.gps[keySel]);
+        if(fallback)MAPA_GPS_ESQ.setView([fallback.lat,fallback.lon],17);
+      }
+      if(inicial){
+        setMarcadorGpsEsquina(L.latLng(inicial.lat,inicial.lon),{pan:false});
+      }else{
+        actualizarCoordsGpsEsquinaUi();
+      }
+    })().catch((err)=>{
+      GPS_ESQ_PICK.open=false;
+      GPS_ESQ_PICK.resolve=null;
+      GPS_ESQ_PICK.reject=null;
+      reject(err);
+    });
+  });
+}
+function confirmarGpsEsquinaModal(){
+  const fmt=formatoGpsApi(GPS_ESQ_PICK.lat,GPS_ESQ_PICK.lon);
+  if(!fmt){alert('Marcá el punto en el mapa antes de guardar.');return}
+  cerrarModalGpsEsquina(fmt);
 }
 function diaHoraISO(){const dia=document.getElementById('asgDia').value;let hora=document.getElementById('asgHora').value;const libre=document.getElementById('asgHoraLibre').value.trim();if(libre)hora=libre;if(!dia||!hora)return null;const m=hora.match(/^(\d{1,2}):(\d{2})$/);if(!m)return null;return `${dia}T${String(m[1]).padStart(2,'0')}:${m[2]}:00`}
 function grupoSeleccionado(){const s=document.getElementById('asgGrupo');return s&&s.value?s.value:'Congregacional'}
@@ -1208,6 +1635,7 @@ async function abrirModalAsignar(numero){
   await cargarEsquinas();
 }
 function cerrarModalAsignar(){
+  if(GPS_ESQ_PICK.open)cerrarModalGpsEsquina(null);
   document.getElementById('modalAsignar').classList.remove('abierto');
   const box=document.getElementById('asgAvisoManzanas');
   if(box){
@@ -1226,6 +1654,9 @@ document.getElementById('asgCerrar').addEventListener('click',cerrarModalAsignar
 document.getElementById('asgCancelar').addEventListener('click',cerrarModalAsignar);
 document.getElementById('asgAddEsquinaTop').addEventListener('click',agregarEsquinaDesdeSelecc);
 document.getElementById('asgEnviar').addEventListener('click',enviarAsignacion);
+document.getElementById('gpsEsquinaCerrar').addEventListener('click',()=>cerrarModalGpsEsquina(null));
+document.getElementById('gpsEsquinaCancelar').addEventListener('click',()=>cerrarModalGpsEsquina(null));
+document.getElementById('gpsEsquinaConfirmar').addEventListener('click',confirmarGpsEsquinaModal);
 document.getElementById('asgFiltroH').addEventListener('input',llenarCalles);
 document.getElementById('asgFiltroV').addEventListener('input',llenarCalles);
 document.getElementById('asgDia').addEventListener('change',llenarHorarios);
@@ -1341,7 +1772,7 @@ function agregarCapasSatelital(mapa,scope){
 function asegurarMapaPrincipal(){if(MAPA)return;MAPA=L.map('mapa',{zoomControl:true,doubleClickZoom:false,worldCopyJump:false,preferCanvas:false,zoomSnap:0.2,zoomDelta:0.2,wheelPxPerZoomLevel:100,wheelDebounceTime:20});agregarCapasSatelital(MAPA,'main');CAPA_REFERENCIAS=L.layerGroup().addTo(MAPA);MAPA.on('dblclick',()=>{if(LIMITES_TERRITORIOS&&LIMITES_TERRITORIOS.isValid())MAPA.fitBounds(LIMITES_TERRITORIOS,{padding:[22,22],maxZoom:18})});MAPA.on('click',(ev)=>{if(MODO_REFERENCIAS)agregarReferencia(ev.latlng)});MAPA.on('zoom zoomend',()=>{actualizarEscalaEtiquetas();actualizarVisibilidadCallesPorZoom()});actualizarVisibilidadCallesPorZoom();renderReferencias();setModoReferencias(false)}
 function asegurarMapaModal(){if(MAPA_MODAL)return;MAPA_MODAL=L.map('mapSatelital',{zoomControl:true,worldCopyJump:false,preferCanvas:false,fadeAnimation:false,zoomAnimation:false,zoomSnap:0.2,zoomDelta:0.2,wheelPxPerZoomLevel:100,wheelDebounceTime:20});agregarCapasSatelital(MAPA_MODAL,'modal');MAPA_MODAL.on('zoom zoomend',actualizarVisibilidadCallesPorZoom);actualizarVisibilidadCallesPorZoom()}
 function dibujarTerritorio(grupo,territorio,opts={}){const selected=!!opts.selected;const modal=!!opts.modal;const abrirEnClick=!!opts.abrirEnClick;const mostrarEtiqueta=opts.mostrarEtiqueta!==false;const info=infoPorClaveTerritorio(territorio.numero);const estilo=estiloTerritorioLeaflet(territorio.numero,{selected,modal});const style=estilo.style;const poly=L.polygon(territorio.latlngs,style).addTo(grupo);if(!modal)POLY_POR_NUMERO[territorio.numero]=poly;const esAsignado=!!(info&&info.abiertoCerrado);const esRural=!!(info&&info.rurales);if(esAsignado||esRural){const overlay=L.polygon(territorio.latlngs,{color:'transparent',weight:0,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(grupo);if(!modal)OVERLAY_TRAMA_POR_NUMERO[territorio.numero]=overlay;const aplicar=()=>{if(overlay&&overlay._path){if(esAsignado)aplicarTramaAsignado(overlay._path,false);else aplicarTramaRural(overlay._path,false);if(overlay.bringToFront)overlay.bringToFront()}};overlay.on('add',aplicar);setTimeout(aplicar,0)}if(abrirEnClick)poly.on('click',(ev)=>{const ll=ev&&ev.latlng?ev.latlng:null;if(ll)abrirPopupTerritorio(territorio.numero,ll)});if(selected&&poly.bringToFront)poly.bringToFront();if(mostrarEtiqueta&&territorio.labelPos){const marker=L.marker([territorio.labelPos.lat,territorio.labelPos.lon],{icon:iconoEtiquetaTerritorio(territorio,{selected,modal}),interactive:false,keyboard:false}).addTo(grupo);if(!modal)LABEL_POR_NUMERO[territorio.numero]=marker}return poly}
-function renderMapaPrincipal(opts={}){recalcularGeometriasAjustadas();asegurarMapaPrincipal();if(CAPA_TERRITORIOS)MAPA.removeLayer(CAPA_TERRITORIOS);CAPA_TERRITORIOS=L.layerGroup().addTo(MAPA);POLY_POR_NUMERO={};LABEL_POR_NUMERO={};OVERLAY_TRAMA_POR_NUMERO={};const polys=[];for(const territorio of TERRITORIOS){polys.push(dibujarTerritorio(CAPA_TERRITORIOS,territorio,{selected:false,modal:false,abrirEnClick:true,mostrarEtiqueta:true}))}LIMITES_TERRITORIOS=L.featureGroup(polys).getBounds();if(!opts.preserveView&&LIMITES_TERRITORIOS&&LIMITES_TERRITORIOS.isValid())MAPA.fitBounds(LIMITES_TERRITORIOS,{padding:[22,22],maxZoom:18});actualizarEscalaEtiquetas();actualizarVisibilidadCallesPorZoom();renderLeyenda();renderReferencias()}
+function renderMapaPrincipal(opts={}){recalcularGeometriasAjustadas();asegurarMapaPrincipal();if(CAPA_TERRITORIOS)MAPA.removeLayer(CAPA_TERRITORIOS);CAPA_TERRITORIOS=L.layerGroup().addTo(MAPA);POLY_POR_NUMERO={};LABEL_POR_NUMERO={};OVERLAY_TRAMA_POR_NUMERO={};const polys=[];for(const territorio of TERRITORIOS){polys.push(dibujarTerritorio(CAPA_TERRITORIOS,territorio,{selected:false,modal:false,abrirEnClick:true,mostrarEtiqueta:true}))}LIMITES_TERRITORIOS=L.featureGroup(polys).getBounds();if(!opts.preserveView&&LIMITES_TERRITORIOS&&LIMITES_TERRITORIOS.isValid())MAPA.fitBounds(LIMITES_TERRITORIOS,{padding:[22,22],maxZoom:18});actualizarEscalaEtiquetas();actualizarVisibilidadCallesPorZoom();renderLeyenda();renderReferencias();renderPuntosEncuentroMapaPrincipal()}
 function asegurarMapaAsignar(){
   if(MAPA_ASG)return;
   MAPA_ASG=L.map('asgMiniMapa',{zoomControl:true,attributionControl:false,doubleClickZoom:false,scrollWheelZoom:true,worldCopyJump:false,preferCanvas:false});
@@ -1372,8 +1803,89 @@ function asegurarMapaAsignar(){
     pane:'asgCallesPane'
   }).addTo(MAPA_ASG);
 }
-function renderMiniMapaAsignar(numero){recalcularGeometriasAjustadas();asegurarMapaAsignar();if(CAPA_ASG)MAPA_ASG.removeLayer(CAPA_ASG);CAPA_ASG=L.layerGroup().addTo(MAPA_ASG);const keySel=String(numero);let polySel=null;const polys=[];for(const territorio of TERRITORIOS){const sel=String(territorio.numero)===keySel;const p=dibujarTerritorio(CAPA_ASG,territorio,{selected:sel,modal:true,abrirEnClick:false,mostrarEtiqueta:true});polys.push(p);if(sel)polySel=p}MAPA_ASG.invalidateSize(true);if(polySel&&polySel.getBounds&&polySel.getBounds().isValid())MAPA_ASG.fitBounds(polySel.getBounds(),{padding:[26,26],maxZoom:18});else{const b=L.featureGroup(polys).getBounds();if(b&&b.isValid())MAPA_ASG.fitBounds(b,{padding:[20,20],maxZoom:16})}}
-async function abrirModalSatelital(numero){const keySel=String(numero).trim().replace(',','.');const territorioSel=TERRITORIO_POR_NUMERO[keySel]||null;const modal=document.getElementById('modalSatelital');const titulo=document.getElementById('tituloSatelital');const coords=document.getElementById('coordsSatelital');const mapEl=document.getElementById('mapSatelital');const body=document.getElementById('bodySatelital');const btnGoogle=document.getElementById('btnAbrirGoogle');titulo.textContent=`Territorio N° ${numero} — Vista satelital`;body.querySelectorAll('.modal-empty').forEach((x)=>x.remove());mapEl.style.display='block';coords.textContent='Cargando…';satelitalActual=territorioSel?territorioSel.labelPos:leerLatLon(META.gps&&META.gps[keySel]);modal.classList.add('abierto');await esperarLayout();asegurarMapaModal();MAPA_MODAL.invalidateSize(true);if(CAPA_MODAL)MAPA_MODAL.removeLayer(CAPA_MODAL);if(!territorioSel&&!satelitalActual){mapEl.style.display='none';const msg=document.createElement('div');msg.className='modal-empty';msg.textContent='No hay geometría ni coordenadas GPS para este territorio.';body.appendChild(msg);btnGoogle.disabled=true;return}CAPA_MODAL=L.layerGroup().addTo(MAPA_MODAL);let polySel=null;for(const territorio of TERRITORIOS){const poly=dibujarTerritorio(CAPA_MODAL,territorio,{selected:territorio.numero===keySel,modal:true,abrirEnClick:false,mostrarEtiqueta:true});if(territorio.numero===keySel)polySel=poly}if(polySel&&polySel.getBounds&&polySel.getBounds().isValid())MAPA_MODAL.fitBounds(polySel.getBounds(),{padding:[40,40],maxZoom:19});else if(satelitalActual)MAPA_MODAL.setView([satelitalActual.lat,satelitalActual.lon],18);if(satelitalActual){coords.textContent=`Lat ${satelitalActual.lat.toFixed(6)} · Lon ${satelitalActual.lon.toFixed(6)}`;btnGoogle.disabled=false}else{coords.textContent='Sin coordenadas GPS';btnGoogle.disabled=true}}
+function renderMiniMapaAsignar(numero){
+  recalcularGeometriasAjustadas();
+  asegurarMapaAsignar();
+  if(CAPA_ASG)MAPA_ASG.removeLayer(CAPA_ASG);
+  MARKER_ASG_PUNTO=null;
+  CAPA_ASG=L.layerGroup().addTo(MAPA_ASG);
+  const keySel=String(numero);
+  let polySel=null;
+  const polys=[];
+  for(const territorio of TERRITORIOS){
+    const sel=String(territorio.numero)===keySel;
+    const p=dibujarTerritorio(CAPA_ASG,territorio,{selected:sel,modal:true,abrirEnClick:false,mostrarEtiqueta:true});
+    polys.push(p);
+    if(sel)polySel=p;
+  }
+  MAPA_ASG.invalidateSize(true);
+  if(polySel&&polySel.getBounds&&polySel.getBounds().isValid())MAPA_ASG.fitBounds(polySel.getBounds(),{padding:[26,26],maxZoom:18});
+  else{
+    const b=L.featureGroup(polys).getBounds();
+    if(b&&b.isValid())MAPA_ASG.fitBounds(b,{padding:[20,20],maxZoom:16});
+  }
+  actualizarMarcadorPuntoAsignar();
+}
+async function abrirModalSatelital(numero){
+  const keySel=String(numero).trim().replace(',','.');
+  const territorioSel=TERRITORIO_POR_NUMERO[keySel]||null;
+  const modal=document.getElementById('modalSatelital');
+  const titulo=document.getElementById('tituloSatelital');
+  const coords=document.getElementById('coordsSatelital');
+  const mapEl=document.getElementById('mapSatelital');
+  const body=document.getElementById('bodySatelital');
+  const btnGoogle=document.getElementById('btnAbrirGoogle');
+  titulo.textContent=`Territorio N° ${numero} — Vista satelital`;
+  body.querySelectorAll('.modal-empty').forEach((x)=>x.remove());
+  mapEl.style.display='block';
+  coords.textContent='Cargando…';
+  const infoSel=infoPorClaveTerritorio(keySel)||{};
+  const gpsPunto=leerGpsPuntoEncuentroInfo(infoSel);
+  satelitalActual=territorioSel?territorioSel.labelPos:leerLatLon(META.gps&&META.gps[keySel]);
+  modal.classList.add('abierto');
+  await esperarLayout();
+  asegurarMapaModal();
+  MAPA_MODAL.invalidateSize(true);
+  if(CAPA_MODAL)MAPA_MODAL.removeLayer(CAPA_MODAL);
+  if(!territorioSel&&!satelitalActual&&!gpsPunto){
+    mapEl.style.display='none';
+    const msg=document.createElement('div');
+    msg.className='modal-empty';
+    msg.textContent='No hay geometría ni coordenadas GPS para este territorio.';
+    body.appendChild(msg);
+    btnGoogle.disabled=true;
+    return;
+  }
+  CAPA_MODAL=L.layerGroup().addTo(MAPA_MODAL);
+  let polySel=null;
+  for(const territorio of TERRITORIOS){
+    const poly=dibujarTerritorio(CAPA_MODAL,territorio,{selected:territorio.numero===keySel,modal:true,abrirEnClick:false,mostrarEtiqueta:true});
+    if(territorio.numero===keySel)polySel=poly;
+  }
+  if(gpsPunto){
+    const m=L.marker([gpsPunto.lat,gpsPunto.lon],{
+      icon:iconoPuntoEncuentro({selected:true}),
+      keyboard:false,
+      zIndexOffset:900
+    }).addTo(CAPA_MODAL);
+    const txtPunto=String(infoSel.puntoEncuentro||'Punto de encuentro').trim()||'Punto de encuentro';
+    m.bindTooltip(txtPunto,{direction:'top',offset:[0,-8],permanent:false});
+  }
+  if(polySel&&polySel.getBounds&&polySel.getBounds().isValid())MAPA_MODAL.fitBounds(polySel.getBounds(),{padding:[40,40],maxZoom:19});
+  else if(gpsPunto)MAPA_MODAL.setView([gpsPunto.lat,gpsPunto.lon],18);
+  else if(satelitalActual)MAPA_MODAL.setView([satelitalActual.lat,satelitalActual.lon],18);
+  if(gpsPunto){
+    coords.textContent=`Punto encuentro · Lat ${gpsPunto.lat.toFixed(6)} · Lon ${gpsPunto.lon.toFixed(6)}`;
+    satelitalActual=gpsPunto;
+    btnGoogle.disabled=false;
+  }else if(satelitalActual){
+    coords.textContent=`Lat ${satelitalActual.lat.toFixed(6)} · Lon ${satelitalActual.lon.toFixed(6)}`;
+    btnGoogle.disabled=false;
+  }else{
+    coords.textContent='Sin coordenadas GPS';
+    btnGoogle.disabled=true;
+  }
+}
 function cerrarModalSatelital(){document.getElementById('modalSatelital').classList.remove('abierto');if(CAPA_MODAL&&MAPA_MODAL){MAPA_MODAL.removeLayer(CAPA_MODAL);CAPA_MODAL=null}}
 function catalogoDesdeFormYTerrMapa(form,terr){const responsablesRaw=form?.responsables;const responsables=[];if(Array.isArray(responsablesRaw)){for(const item of responsablesRaw){const txt=String(item??'').trim();if(!txt)continue;const partes=txt.split(',').map((s)=>s.trim()).filter(Boolean);if(partes.length>1){for(const p of partes)responsables.push(p)}else{responsables.push(txt)}}}else if(typeof responsablesRaw==='string'){responsables.push(...responsablesRaw.split(',').map((s)=>s.trim()).filter(Boolean))}const responsablesUnicos=[...new Set(responsables)];const territorios=Array.isArray(terr)?terr.map((t)=>String(t?.numero||'').trim()).filter(Boolean):[];territorios.sort((a,b)=>Number(a)-Number(b));const descripciones={};if(Array.isArray(terr)){for(const t of terr){const num=String(t?.numero||'').trim();const desc=String(t?.descripcion??t?.Descripcion??'').trim();if(num&&desc)descripciones[num]=desc}}return{responsables:responsablesUnicos,territorios,descripciones}}
 async function armarBundleDatosSemanaMapa(){const[rSal,rForm,rTerr]=await Promise.all([fetch('/api/salidas',{cache:'no-store'}),fetch('/api/form-data',{cache:'no-store'}),fetch('/api/territorios',{cache:'no-store'})]);if(!rSal.ok)throw new Error('HTTP '+rSal.status+' en /api/salidas');if(!rForm.ok)throw new Error('HTTP '+rForm.status+' en /api/form-data');if(!rTerr.ok)throw new Error('HTTP '+rTerr.status+' en /api/territorios');const salidas=await rSal.json();const form=await rForm.json();const terr=await rTerr.json();const cat=catalogoDesdeFormYTerrMapa(form,terr);return{exportado:new Date().toISOString(),version:2,salidas,responsables:cat.responsables,territorios:cat.territorios,descripciones:cat.descripciones}}
@@ -1543,8 +2055,122 @@ document.getElementById('satOpacity').addEventListener('input',(e)=>{const v=Num
 actualizarControlOpacidadUi();
 document.getElementById('refDateInput').addEventListener('change',aplicarFechaReferenciaDesdeInput);
 document.getElementById('refDateHoy').addEventListener('click',()=>{FECHA_REFERENCIA=null;actualizarControlFechaUi();renderMapaPrincipal({preserveView:true});if(MAPA&&MAPA.closePopup)MAPA.closePopup()});
+function anioServicioActualS13(){
+  const h=hoyLocal();
+  return h.getMonth()>=8?h.getFullYear()+1:h.getFullYear();
+}
+function abrirModalS13Anio(){
+  if(!origenEsAccessVivo()){
+    alert('S-13 requiere servidor local con Access (debe figurar "Access (vivo)" arriba a la derecha).');
+    return;
+  }
+  const sel=document.getElementById('s13AnioSelect');
+  const actual=anioServicioActualS13();
+  sel.innerHTML='';
+  for(let y=2024;y<=2030;y++){
+    const o=document.createElement('option');
+    o.value=String(y);
+    o.textContent=String(y-1)+' - '+String(y)+' (año de servicio '+y+')';
+    if(y===actual)o.selected=true;
+    sel.appendChild(o);
+  }
+  const modal=document.getElementById('modalS13Anio');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+}
+function cerrarModalS13Anio(){
+  const modal=document.getElementById('modalS13Anio');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+}
+function escapeS13(s){
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function celdaCicloS13(ciclo){
+  const c=ciclo||{};
+  const enc=escapeS13(c.encargado||'').replace(/\r\n|\n|\r/g,'<br>');
+  const asg=escapeS13(c.asignado||'');
+  const comp=escapeS13(c.completado||'');
+  return '<div class="sub"><div>'+enc+'</div><div>'+asg+'</div><div>'+comp+'</div></div>';
+}
+function renderHojaS13(datos,hoja,totalHojas){
+  const ciclosPorHoja=Number(datos.ciclosPorHoja)||4;
+  const subhead='<div class="subhead"><div>Asignado a</div><div>Fecha en que se asignó</div><div>Fecha en que se completó</div></div>';
+  const thCiclos=Array.from({length:ciclosPorHoja},()=>'<th class="ciclo">'+subhead+'</th>').join('');
+  const filas=(hoja.filas||[]).map((f)=>{
+    const ciclos=Array.isArray(f.ciclos)?f.ciclos.slice():[];
+    while(ciclos.length<ciclosPorHoja)ciclos.push({});
+    const tds=ciclos.slice(0,ciclosPorHoja).map((c)=>'<td class="ciclo">'+celdaCicloS13(c)+'</td>').join('');
+    return '<tr>'+
+      '<td class="num">'+escapeS13(f.numero||'')+'</td>'+
+      '<td class="ult">'+escapeS13(f.ultimaCompletada||'')+'</td>'+
+      tds+
+      '</tr>';
+  }).join('');
+  return '<section class="hoja">'+
+    '<div class="s13-head">'+
+      '<div><h3 class="s13-title">REGISTRO DE ASIGNACIÓN DE TERRITORIO</h3>'+
+      '<p class="s13-cong">Congregación: '+escapeS13(datos.congregacion||'Carlos Casares')+'</p></div>'+
+      '<div class="s13-anio">Año de servicio: '+escapeS13(datos.anioLabel||'')+'</div>'+
+    '</div>'+
+    '<table class="s13"><thead><tr>'+
+      '<th class="num">Núm. de terr.</th>'+
+      '<th class="ult">Última fecha en que se completó*</th>'+
+      thCiclos+
+    '</tr></thead><tbody>'+filas+'</tbody></table>'+
+    '<div class="s13-foot"><span>*Cuando comience una nueva página, anote en esta columna la última fecha en que los territorios se completaron.</span>'+
+    '<span>S-13-S · hoja '+escapeS13(hoja.pagina)+' / '+escapeS13(totalHojas)+'</span></div>'+
+  '</section>';
+}
+function mostrarVistaS13(datos){
+  const cont=document.getElementById('s13Contenido');
+  const hojas=Array.isArray(datos.hojas)?datos.hojas:[];
+  cont.innerHTML=hojas.map((h)=>renderHojaS13(datos,h,hojas.length)).join('');
+  document.getElementById('s13VistaMeta').textContent=
+    (datos.congregacion||'Carlos Casares')+' · '+
+    (datos.anioLabel||'')+' · '+
+    (datos.totalFilas!=null?datos.totalFilas+' filas':'')+' · '+
+    hojas.length+' hoja(s)';
+  const vista=document.getElementById('vistaS13');
+  vista.classList.add('abierto');
+  vista.setAttribute('aria-hidden','false');
+}
+function cerrarVistaS13(){
+  const vista=document.getElementById('vistaS13');
+  vista.classList.remove('abierto');
+  vista.setAttribute('aria-hidden','true');
+}
+async function generarS13DesdeModal(){
+  const anio=Number(document.getElementById('s13AnioSelect').value);
+  if(!Number.isFinite(anio)||anio<2000){alert('Año de servicio inválido.');return}
+  cerrarModalS13Anio();
+  try{
+    const r=await fetch('/api/s13?anio='+encodeURIComponent(String(anio)),{cache:'no-store'});
+    const body=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(body.error||body.message||('HTTP '+r.status));
+    mostrarVistaS13(body);
+  }catch(e){
+    alert('No se pudo generar el S-13:\n'+(e&&e.message?e.message:e));
+  }
+}
+function exportarS13Pdf(){
+  if(!document.getElementById('vistaS13').classList.contains('abierto'))return;
+  window.print();
+}
+
 actualizarControlFechaUi();
 document.getElementById('btnSalidas').addEventListener('click',()=>{window.open('predicacion.html','_blank','noopener')});
+document.getElementById('btnS13').addEventListener('click',abrirModalS13Anio);
+document.getElementById('s13AnioCancelar').addEventListener('click',cerrarModalS13Anio);
+document.getElementById('s13AnioGenerar').addEventListener('click',()=>{generarS13DesdeModal().catch((e)=>alert(e.message))});
+document.getElementById('modalS13Anio').addEventListener('click',(e)=>{if(e.target&&e.target.id==='modalS13Anio')cerrarModalS13Anio()});
+document.getElementById('s13CerrarVista').addEventListener('click',cerrarVistaS13);
+document.getElementById('s13ExportPdf').addEventListener('click',exportarS13Pdf);
+document.addEventListener('keydown',(e)=>{
+  if(e.key!=='Escape')return;
+  if(document.getElementById('vistaS13').classList.contains('abierto')){cerrarVistaS13();return}
+  if(document.getElementById('modalS13Anio').classList.contains('open'))cerrarModalS13Anio();
+});
 document.getElementById('btnRecibirGoogle').addEventListener('click',()=>{recibirDatosSemanaDesdeGoogle()});
 document.getElementById('btnSyncGoogle').addEventListener('click',()=>{sincronizarGoogleDesdeMapa()});
 document.getElementById('btnReferencias').addEventListener('click',()=>{setModoReferencias(!MODO_REFERENCIAS)});

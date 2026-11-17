@@ -85,12 +85,33 @@ function Repair-Text {
     return $s
 }
 
+function Format-NumeroTerritorioDouble {
+    param([double]$d)
+    # Evita basura binaria (78.2 -> 78.1999969...) típica de Double en Access.
+    $rounded = [math]::Round($d, 4)
+    if ([math]::Abs($rounded - [math]::Round($rounded)) -lt 0.0000001) {
+        return ([long][math]::Round($rounded)).ToString([System.Globalization.CultureInfo]::InvariantCulture)
+    }
+    $s = $rounded.ToString('0.####', [System.Globalization.CultureInfo]::InvariantCulture)
+    return $s.TrimEnd('0').TrimEnd('.')
+}
+
 function Normalize-NumeroTerritorio {
     param($raw)
     if ($null -eq $raw) { return '' }
-    if ($raw -is [string]) { return $raw.Trim() }
+    if ($raw -is [string]) {
+        $t = $raw.Trim()
+        if ($t -eq '') { return '' }
+        $tn = $t
+        if ($tn.Contains(',') -and -not $tn.Contains('.')) { $tn = $tn.Replace(',', '.') }
+        $d = 0.0
+        if ([double]::TryParse($tn, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$d)) {
+            return (Format-NumeroTerritorioDouble $d)
+        }
+        return $t
+    }
     try {
-        return ([decimal][double]$raw).ToString([System.Globalization.CultureInfo]::InvariantCulture).Trim()
+        return (Format-NumeroTerritorioDouble ([double]$raw))
     } catch {
         return ([string]$raw).Trim()
     }
@@ -106,6 +127,68 @@ function Param-OleDbNumeroTerritorio {
     if ([double]::TryParse($tn, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$d)) { return $d }
     if ([double]::TryParse($t, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::CurrentCulture, [ref]$d)) { return $d }
     return $t
+}
+
+function Split-EncargadoNombres {
+    param($raw)
+    $lista = New-Object System.Collections.ArrayList
+    if ($null -eq $raw -or $raw -is [System.DBNull]) { return , @() }
+    $txt = [string]$raw
+    if ([string]::IsNullOrWhiteSpace($txt)) { return , @() }
+    foreach ($parte in [regex]::Split($txt, '[\r\n]+')) {
+        $n = $parte.Trim()
+        if ($n -ne '') { [void]$lista.Add($n) }
+    }
+    return , @($lista.ToArray())
+}
+
+function Join-EncargadoNombresUnicos {
+    param([object[]]$nombres)
+    $vistos = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    $out = New-Object System.Collections.ArrayList
+    foreach ($n in @($nombres)) {
+        $t = ([string]$n).Trim()
+        if ($t -eq '') { continue }
+        if ($vistos.Add($t)) { [void]$out.Add($t) }
+    }
+    if ($out.Count -eq 0) { return '' }
+    return ($out.ToArray() -join "`r`n")
+}
+
+function Merge-EncargadoNombres {
+    param($existente, $nuevo)
+    $todos = New-Object System.Collections.ArrayList
+    foreach ($n in (Split-EncargadoNombres $existente)) { [void]$todos.Add($n) }
+    foreach ($n in (Split-EncargadoNombres $nuevo)) { [void]$todos.Add($n) }
+    return (Join-EncargadoNombresUnicos @($todos.ToArray()))
+}
+
+function Get-AnioServicioActual {
+    $hoy = [datetime]::Today
+    if ($hoy.Month -ge 9) { return ($hoy.Year + 1) }
+    return $hoy.Year
+}
+
+function Get-RangoAnioServicio {
+    param([int]$anioServicio)
+    $desde = Get-Date -Year ($anioServicio - 1) -Month 9 -Day 1
+    $hasta = Get-Date -Year $anioServicio -Month 8 -Day 31
+    return [ordered]@{
+        anioServicio = $anioServicio
+        desde = $desde.Date
+        hasta = $hasta.Date
+        label = ('{0} - {1}' -f ($anioServicio - 1), $anioServicio)
+    }
+}
+
+function Format-FechaS13 {
+    param($valor)
+    if ($null -eq $valor -or $valor -is [System.DBNull]) { return $null }
+    try {
+        return ([datetime]$valor).ToString('dd/MM/yyyy')
+    } catch {
+        return $null
+    }
 }
 
 function Ensure-RelacionNumeroTerritorioDouble {
@@ -132,6 +215,60 @@ function Ensure-RelacionNumeroTerritorioDouble {
 }
 
 Ensure-RelacionNumeroTerritorioDouble
+
+function Normalize-PuntoEncuentroKey {
+    param([string]$txt)
+    $t = if ($null -eq $txt) { '' } else { (Repair-Text ([string]$txt)).Trim().ToLowerInvariant() }
+    if ($t -eq '') { return '' }
+    $t = [regex]::Replace($t, '\s+', ' ')
+    $m = [regex]::Match($t, '^(.+?)\s+y\s+(.+)$')
+    if ($m.Success) {
+        $a = $m.Groups[1].Value.Trim()
+        $b = $m.Groups[2].Value.Trim()
+        if ($a.CompareTo($b) -gt 0) { return ($b + '|' + $a) }
+        return ($a + '|' + $b)
+    }
+    return $t
+}
+
+function Read-GpsIndexPuntosEncuentro {
+    param([System.Data.OleDb.OleDbConnection]$con)
+    $sql = @"
+SELECT R.[NumeroTerritorio] AS Num, R.[GPS] AS Gps,
+       C1.[NombreCalles] AS N1, C2.[NombreCalles] AS N2
+FROM ([RelacionTerritoriopuntosdeencuentro] AS R
+INNER JOIN [Calles] AS C1 ON R.[Id Calle1] = C1.[Id])
+LEFT JOIN [Calles] AS C2 ON R.[Id Calle2] = C2.[Id]
+WHERE R.[GPS] IS NOT NULL AND Trim(R.[GPS]) <> ''
+"@
+    $idx = @{}
+    $cmd = $con.CreateCommand(); $cmd.CommandText = $sql
+    $rd = $cmd.ExecuteReader()
+    try {
+        while ($rd.Read()) {
+            $gpsInfo = Parse-GpsField $rd['Gps']
+            if ($null -eq $gpsInfo) { continue }
+            $num = Normalize-NumeroTerritorio ([string]$rd['Num'])
+            if ([string]::IsNullOrWhiteSpace($num)) { continue }
+            $n1 = (Repair-Text $rd['N1'])
+            $n2 = if ($rd['N2'] -is [System.DBNull]) { '' } else { (Repair-Text $rd['N2']) }
+            $txt = if ([string]::IsNullOrWhiteSpace($n2)) { $n1 } else { "$n1 y $n2" }
+            $pkey = Normalize-PuntoEncuentroKey $txt
+            if ($pkey -eq '') { continue }
+            $payload = [ordered]@{
+                gps   = [string]$gpsInfo.gps
+                lat   = [double]$gpsInfo.lat
+                lon   = [double]$gpsInfo.lon
+                texto = $txt
+            }
+            $idx["$num|$pkey"] = $payload
+            # También indexar solo por territorio+texto exacto normalizado para búsquedas directas.
+            $idx["$num|txt:$pkey"] = $payload
+        }
+    }
+    finally { $rd.Close() }
+    return $idx
+}
 
 function Read-Territorios {
     # Jet/ACE no maneja bien subqueries correlacionadas en SELECT, asi que
@@ -214,6 +351,9 @@ ORDER BY nt.NumeroTerritorio
                 fechaAsignado      = $asgF
                 enviado            = $envS
                 puntoEncuentro     = $ptoS
+                puntoEncuentroGps  = $null
+                puntoEncuentroLat  = $null
+                puntoEncuentroLon  = $null
                 responsables       = $rspS
                 grupo              = $grpS
                 manzanasPendientes = $mpS
@@ -223,6 +363,24 @@ ORDER BY nt.NumeroTerritorio
             })
         }
         $rd.Close()
+
+        $gpsIdx = @{}
+        try { $gpsIdx = Read-GpsIndexPuntosEncuentro $con } catch { $gpsIdx = @{} }
+        foreach ($row in $lista) {
+            $ptoTxt = [string]$row.puntoEncuentro
+            if ([string]::IsNullOrWhiteSpace($ptoTxt)) { continue }
+            $num = Normalize-NumeroTerritorio ([string]$row.numero)
+            $pkey = Normalize-PuntoEncuentroKey $ptoTxt
+            if ($pkey -eq '') { continue }
+            $hit = $null
+            if ($gpsIdx.ContainsKey("$num|$pkey")) { $hit = $gpsIdx["$num|$pkey"] }
+            elseif ($gpsIdx.ContainsKey("$num|txt:$pkey")) { $hit = $gpsIdx["$num|txt:$pkey"] }
+            if ($null -eq $hit) { continue }
+            $row.puntoEncuentroGps = [string]$hit.gps
+            $row.puntoEncuentroLat = [double]$hit.lat
+            $row.puntoEncuentroLon = [double]$hit.lon
+        }
+
         return ,$lista.ToArray()
     }
     finally { $con.Close() }
@@ -279,9 +437,30 @@ function Read-SalidasPredicacion {
                 ManzanasPendientes = if ($rd['ManzanasPendientes'] -is [System.DBNull]) { '' } else { [string]$rd['ManzanasPendientes'] }
                 Direccion = $dir
                 Descripcion = $desc
+                PuntoEncuentroGps = $null
+                PuntoEncuentroLat = $null
+                PuntoEncuentroLon = $null
             })
         }
         $rd.Close()
+
+        $gpsIdx = @{}
+        try { $gpsIdx = Read-GpsIndexPuntosEncuentro $con } catch { $gpsIdx = @{} }
+        foreach ($row in $lista) {
+            $ptoTxt = [string]$row.PuntosDeEncuentros
+            if ([string]::IsNullOrWhiteSpace($ptoTxt)) { continue }
+            $num = Normalize-NumeroTerritorio ([string]$row.NumeroTerritorio)
+            $pkey = Normalize-PuntoEncuentroKey $ptoTxt
+            if ($pkey -eq '') { continue }
+            $hit = $null
+            if ($gpsIdx.ContainsKey("$num|$pkey")) { $hit = $gpsIdx["$num|$pkey"] }
+            elseif ($gpsIdx.ContainsKey("$num|txt:$pkey")) { $hit = $gpsIdx["$num|txt:$pkey"] }
+            if ($null -eq $hit) { continue }
+            $row.PuntoEncuentroGps = [string]$hit.gps
+            $row.PuntoEncuentroLat = [double]$hit.lat
+            $row.PuntoEncuentroLon = [double]$hit.lon
+        }
+
         return ,$lista.ToArray()
     }
     finally { $con.Close() }
@@ -639,6 +818,226 @@ function Read-Historial {
     finally { $con.Close() }
 }
 
+function ConvertTo-SortableTerritorioKey {
+    param([string]$numero)
+    $t = if ($null -eq $numero) { '' } else { $numero.Trim() }
+    $tn = $t
+    if ($tn.Contains(',') -and -not $tn.Contains('.')) { $tn = $tn.Replace(',', '.') }
+    $d = 0.0
+    if ([double]::TryParse($tn, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$d)) {
+        return [double]$d
+    }
+    return [double]::MaxValue
+}
+
+function Read-S13 {
+    param([int]$anioServicio)
+
+    if ($anioServicio -lt 2000 -or $anioServicio -gt 2100) {
+        throw "Anio de servicio invalido: $anioServicio"
+    }
+
+    $rango = Get-RangoAnioServicio $anioServicio
+    $desde = [datetime]$rango.desde
+    $hasta = [datetime]$rango.hasta
+    $filasPorHoja = 12
+    $ciclosPorHoja = 4
+
+    $con = New-Object System.Data.OleDb.OleDbConnection $cadenaConexion
+    $con.Open()
+    try {
+        $porNumero = @{}
+
+        $cmdTerr = $con.CreateCommand()
+        $cmdTerr.CommandText = "SELECT NumeroTerritorio, Rurales, Asignado, Enviado, Responsables, UltimoEncargado, FechaManzanasPendientes, ManzanasPendientes, Descripcion FROM NumeroDeTerritorios"
+        $rd = $cmdTerr.ExecuteReader()
+        while ($rd.Read()) {
+            $num = Normalize-NumeroTerritorio $rd['NumeroTerritorio']
+            if ([string]::IsNullOrWhiteSpace($num)) { continue }
+            $porNumero[$num] = [ordered]@{
+                numero = $num
+                rurales = [bool]($rd['Rurales'] -as [bool])
+                asignado = $rd['Asignado']
+                enviado = $rd['Enviado']
+                responsables = $rd['Responsables']
+                ultimoEncargado = $rd['UltimoEncargado']
+                fechaManzanasPendientes = $rd['FechaManzanasPendientes']
+                manzanasPendientes = $rd['ManzanasPendientes']
+                descripcion = if ($rd['Descripcion'] -is [System.DBNull]) { $null } else { [string]$rd['Descripcion'] }
+                ultimaPrevia = $null
+                ciclos = New-Object System.Collections.ArrayList
+            }
+        }
+        $rd.Close()
+
+        $cmdPrev = $con.CreateCommand()
+        $cmdPrev.CommandText = "SELECT NumeroTerritorio, Max(Terminado) AS MaxTerminado FROM Historial WHERE Terminado < ? GROUP BY NumeroTerritorio"
+        $pPrev = $cmdPrev.Parameters.Add('@d', [System.Data.OleDb.OleDbType]::Date)
+        $pPrev.Value = $desde
+        $rd = $cmdPrev.ExecuteReader()
+        while ($rd.Read()) {
+            $num = Normalize-NumeroTerritorio $rd['NumeroTerritorio']
+            if (-not $porNumero.ContainsKey($num)) { continue }
+            if ($rd['MaxTerminado'] -isnot [System.DBNull] -and $null -ne $rd['MaxTerminado']) {
+                $porNumero[$num].ultimaPrevia = [datetime]$rd['MaxTerminado']
+            }
+        }
+        $rd.Close()
+
+        $cmdHist = $con.CreateCommand()
+        $cmdHist.CommandText = "SELECT Id, NumeroTerritorio, Iniciado, Terminado, Encargado FROM Historial WHERE Terminado >= ? AND Terminado <= ? ORDER BY NumeroTerritorio, Terminado, Id"
+        $p1 = $cmdHist.Parameters.Add('@a', [System.Data.OleDb.OleDbType]::Date); $p1.Value = $desde
+        $p2 = $cmdHist.Parameters.Add('@b', [System.Data.OleDb.OleDbType]::Date); $p2.Value = $hasta.AddDays(1).AddSeconds(-1)
+        $rd = $cmdHist.ExecuteReader()
+        while ($rd.Read()) {
+            $num = Normalize-NumeroTerritorio $rd['NumeroTerritorio']
+            if (-not $porNumero.ContainsKey($num)) {
+                $porNumero[$num] = [ordered]@{
+                    numero = $num
+                    rurales = $false
+                    asignado = $null
+                    enviado = $null
+                    responsables = $null
+                    ultimoEncargado = $null
+                    fechaManzanasPendientes = $null
+                    manzanasPendientes = $null
+                    descripcion = $null
+                    ultimaPrevia = $null
+                    ciclos = New-Object System.Collections.ArrayList
+                }
+            }
+            [void]$porNumero[$num].ciclos.Add([ordered]@{
+                encargado = if ($rd['Encargado'] -is [System.DBNull]) { '' } else { [string]$rd['Encargado'] }
+                asignado = Format-FechaS13 $rd['Iniciado']
+                completado = Format-FechaS13 $rd['Terminado']
+                terminadoDt = if ($rd['Terminado'] -is [System.DBNull]) { $null } else { [datetime]$rd['Terminado'] }
+                abierto = $false
+            })
+        }
+        $rd.Close()
+
+        foreach ($num in @($porNumero.Keys)) {
+            $t = $porNumero[$num]
+            $asgObj = $t.asignado
+            $tieneAsignado = -not ($asgObj -is [System.DBNull] -or $null -eq $asgObj)
+            if (-not $tieneAsignado) { continue }
+
+            $asgDt = [datetime]$asgObj
+            $envObj = $t.enviado
+            $fechaRefAbierta = $asgDt
+            if (-not ($envObj -is [System.DBNull] -or $null -eq $envObj)) {
+                $fechaRefAbierta = [datetime]$envObj
+            } elseif (-not ($t.fechaManzanasPendientes -is [System.DBNull] -or $null -eq $t.fechaManzanasPendientes)) {
+                $fechaRefAbierta = [datetime]$t.fechaManzanasPendientes
+            }
+
+            if ($fechaRefAbierta.Date -lt $desde -or $fechaRefAbierta.Date -gt $hasta) { continue }
+
+            $encargadoAbierto = Merge-EncargadoNombres $t.ultimoEncargado $t.responsables
+            [void]$t.ciclos.Add([ordered]@{
+                encargado = $encargadoAbierto
+                asignado = Format-FechaS13 $asgDt
+                completado = $null
+                terminadoDt = $null
+                abierto = $true
+            })
+        }
+
+        $filasLogicas = New-Object System.Collections.ArrayList
+        $numsOrden = @($porNumero.Keys) | Sort-Object @{ Expression = { ConvertTo-SortableTerritorioKey $_ } }, @{ Expression = { $_ } }
+        foreach ($num in $numsOrden) {
+            $t = $porNumero[$num]
+            $ciclos = @($t.ciclos)
+            if ($ciclos.Count -eq 0 -and -not $t.rurales -and $null -eq $t.ultimaPrevia) {
+                # Incluir territorio sin actividad solo si es rural (Sin viviendas) o tiene ultima previa.
+                # Access lista todos los de NumeroDeTerritorios; replicamos eso.
+            }
+
+            $ultimaBase = if ($t.rurales) { 'Sin viviendas' } else { Format-FechaS13 $t.ultimaPrevia }
+            if ($ciclos.Count -eq 0) {
+                [void]$filasLogicas.Add([ordered]@{
+                    numero = $num
+                    ultimaCompletada = $ultimaBase
+                    ciclos = @()
+                })
+                continue
+            }
+
+            $offset = 0
+            $ultimaChunk = $ultimaBase
+            while ($offset -lt $ciclos.Count) {
+                $slice = @($ciclos[$offset..([Math]::Min($offset + $ciclosPorHoja - 1, $ciclos.Count - 1))])
+                $ciclosOut = New-Object System.Collections.ArrayList
+                foreach ($c in $slice) {
+                    [void]$ciclosOut.Add([ordered]@{
+                        encargado = ([string]$c.encargado)
+                        asignado = $c.asignado
+                        completado = $c.completado
+                        abierto = [bool]$c.abierto
+                    })
+                }
+                [void]$filasLogicas.Add([ordered]@{
+                    numero = $num
+                    ultimaCompletada = $ultimaChunk
+                    ciclos = @($ciclosOut.ToArray())
+                })
+
+                $ultimoTerm = $null
+                foreach ($c in $slice) {
+                    if ($null -ne $c.terminadoDt) { $ultimoTerm = $c.terminadoDt }
+                    elseif ($c.completado) {
+                        try { $ultimoTerm = [datetime]::ParseExact([string]$c.completado, 'dd/MM/yyyy', [System.Globalization.CultureInfo]::InvariantCulture) } catch {}
+                    }
+                }
+                if ($null -ne $ultimoTerm) {
+                    $ultimaChunk = Format-FechaS13 $ultimoTerm
+                } elseif ($t.rurales) {
+                    $ultimaChunk = 'Sin viviendas'
+                }
+
+                $offset += $ciclosPorHoja
+            }
+        }
+
+        $hojas = New-Object System.Collections.ArrayList
+        $total = $filasLogicas.Count
+        $pagina = 1
+        for ($i = 0; $i -lt $total; $i += $filasPorHoja) {
+            $fin = [Math]::Min($i + $filasPorHoja - 1, $total - 1)
+            $bloque = @($filasLogicas[$i..$fin])
+            while ($bloque.Count -lt $filasPorHoja) {
+                $bloque += [ordered]@{ numero = ''; ultimaCompletada = $null; ciclos = @() }
+            }
+            [void]$hojas.Add([ordered]@{
+                pagina = $pagina
+                filas = $bloque
+            })
+            $pagina++
+        }
+        if ($hojas.Count -eq 0) {
+            $vacia = New-Object System.Collections.ArrayList
+            for ($k = 0; $k -lt $filasPorHoja; $k++) {
+                [void]$vacia.Add([ordered]@{ numero = ''; ultimaCompletada = $null; ciclos = @() })
+            }
+            [void]$hojas.Add([ordered]@{ pagina = 1; filas = @($vacia.ToArray()) })
+        }
+
+        return [ordered]@{
+            ok = $true
+            congregacion = 'Carlos Casares'
+            anioServicio = $anioServicio
+            anioLabel = [string]$rango.label
+            desde = $desde.ToString('yyyy-MM-dd')
+            hasta = $hasta.ToString('yyyy-MM-dd')
+            ciclosPorHoja = $ciclosPorHoja
+            filasPorHoja = $filasPorHoja
+            totalFilas = $total
+            hojas = @($hojas.ToArray())
+        }
+    }
+    finally { $con.Close() }
+}
+
 function Read-FormData {
     $con = New-Object System.Data.OleDb.OleDbConnection $cadenaConexion
     $con.Open()
@@ -919,10 +1318,72 @@ function Delete-CatalogoItem {
     finally { $con.Close() }
 }
 
+function Coerce-DoubleInvariant {
+    param($v)
+    if ($null -eq $v -or $v -is [System.DBNull]) { return $null }
+    if ($v -is [double] -or $v -is [float] -or $v -is [decimal] -or $v -is [int] -or $v -is [long]) {
+        return [double]$v
+    }
+    $s = ([string]$v).Trim()
+    if ($s -eq '') { return $null }
+    if ($s.Contains(',') -and -not $s.Contains('.')) { $s = $s.Replace(',', '.') }
+    $d = 0.0
+    if ([double]::TryParse($s, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$d)) { return $d }
+    if ([double]::TryParse($s, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::CurrentCulture, [ref]$d)) { return $d }
+    return $null
+}
+
+function Format-GpsLatLon {
+    param($lat, $lon)
+    $la = Coerce-DoubleInvariant $lat
+    $lo = Coerce-DoubleInvariant $lon
+    if ($null -eq $la -or $null -eq $lo) { return '' }
+    if ($la -lt -90 -or $la -gt 90 -or $lo -lt -180 -or $lo -gt 180) { return '' }
+    return ('{0},{1}' -f $la.ToString('0.#######', [System.Globalization.CultureInfo]::InvariantCulture), $lo.ToString('0.#######', [System.Globalization.CultureInfo]::InvariantCulture))
+}
+
+function Parse-GpsField {
+    param($raw)
+    if ($null -eq $raw -or $raw -is [System.DBNull]) { return $null }
+    $s = ([string]$raw).Trim()
+    if ($s -eq '') { return $null }
+    $lat = $null; $lon = $null
+    if ($s.StartsWith('{')) {
+        try {
+            $j = $s | ConvertFrom-Json
+            $lat = $j.lat; if ($null -eq $lat) { $lat = $j.latitude }
+            $lon = $j.lon; if ($null -eq $lon) { $lon = $j.lng }; if ($null -eq $lon) { $lon = $j.longitude }
+        } catch { return $null }
+    } else {
+        $parts = $s -split '[,;\s]+' | Where-Object { $_ -ne '' }
+        if ($parts.Count -ge 2) { $lat = $parts[0]; $lon = $parts[1] }
+    }
+    $fmt = Format-GpsLatLon $lat $lon
+    if ([string]::IsNullOrWhiteSpace($fmt)) { return $null }
+    $bits = $fmt.Split(',')
+    return [ordered]@{
+        gps = $fmt
+        lat = [double]::Parse($bits[0], [System.Globalization.CultureInfo]::InvariantCulture)
+        lon = [double]::Parse($bits[1], [System.Globalization.CultureInfo]::InvariantCulture)
+    }
+}
+
+function Normalize-GpsFromBody {
+    param($body)
+    if ($null -eq $body) { return '' }
+    $direct = Format-GpsLatLon $body.lat $body.lon
+    if (-not [string]::IsNullOrWhiteSpace($direct)) { return $direct }
+    if ($null -ne $body.gps) {
+        $parsed = Parse-GpsField $body.gps
+        if ($null -ne $parsed) { return [string]$parsed.gps }
+    }
+    return ''
+}
+
 function Read-Esquinas {
     param([string]$numero)
     $sql = @"
-SELECT R.[Id Calle1] AS Id1, R.[Id Calle2] AS Id2,
+SELECT R.[Id Calle1] AS Id1, R.[Id Calle2] AS Id2, R.[GPS] AS Gps,
        C1.[NombreCalles] AS N1, C2.[NombreCalles] AS N2
 FROM ([RelacionTerritoriopuntosdeencuentro] AS R
 INNER JOIN [Calles] AS C1 ON R.[Id Calle1] = C1.[Id])
@@ -953,7 +1414,14 @@ ORDER BY C1.[NombreCalles], C2.[NombreCalles]
             $n1 = (Repair-Text $rd['N1'])
             $n2 = if ($rd['N2'] -is [System.DBNull]) { '' } else { (Repair-Text $rd['N2']) }
             $txt = if ([string]::IsNullOrWhiteSpace($n2)) { $n1 } else { "$n1 y $n2" }
-            [void]$lista.Add([ordered]@{ id1 = $id1; id2 = $id2; texto = $txt })
+            $gpsInfo = Parse-GpsField $rd['Gps']
+            $row = [ordered]@{ id1 = $id1; id2 = $id2; texto = $txt; gps = $null; lat = $null; lon = $null }
+            if ($null -ne $gpsInfo) {
+                $row.gps = [string]$gpsInfo.gps
+                $row.lat = [double]$gpsInfo.lat
+                $row.lon = [double]$gpsInfo.lon
+            }
+            [void]$lista.Add($row)
         }
         $rd.Close()
         return ,$lista.ToArray()
@@ -961,8 +1429,34 @@ ORDER BY C1.[NombreCalles], C2.[NombreCalles]
     finally { $con.Close() }
 }
 
+function Set-EsquinaGpsInternal {
+    param(
+        [System.Data.OleDb.OleDbConnection]$con,
+        $pNum,
+        [int]$id1,
+        [int]$id2,
+        [string]$gps
+    )
+    $cmd = $con.CreateCommand()
+    if ($id2 -gt 0) {
+        $cmd.CommandText = "UPDATE [RelacionTerritoriopuntosdeencuentro] SET [GPS]=? WHERE [NumeroTerritorio]=? AND (([Id Calle1]=? AND [Id Calle2]=?) OR ([Id Calle1]=? AND [Id Calle2]=?))"
+        if ([string]::IsNullOrWhiteSpace($gps)) { [void]$cmd.Parameters.AddWithValue('@g', [DBNull]::Value) } else { [void]$cmd.Parameters.AddWithValue('@g', $gps) }
+        [void]$cmd.Parameters.AddWithValue('@n', $pNum)
+        [void]$cmd.Parameters.AddWithValue('@c1', $id1)
+        [void]$cmd.Parameters.AddWithValue('@c2', $id2)
+        [void]$cmd.Parameters.AddWithValue('@c1b', $id2)
+        [void]$cmd.Parameters.AddWithValue('@c2b', $id1)
+    } else {
+        $cmd.CommandText = "UPDATE [RelacionTerritoriopuntosdeencuentro] SET [GPS]=? WHERE [NumeroTerritorio]=? AND [Id Calle1]=? AND ([Id Calle2] IS NULL OR [Id Calle2]=0)"
+        if ([string]::IsNullOrWhiteSpace($gps)) { [void]$cmd.Parameters.AddWithValue('@g', [DBNull]::Value) } else { [void]$cmd.Parameters.AddWithValue('@g', $gps) }
+        [void]$cmd.Parameters.AddWithValue('@n', $pNum)
+        [void]$cmd.Parameters.AddWithValue('@c1', $id1)
+    }
+    [void]$cmd.ExecuteNonQuery()
+}
+
 function Add-Esquina {
-    param([string]$numero, [int]$id1, [int]$id2)
+    param([string]$numero, [int]$id1, [int]$id2, [string]$gps = '')
     $con = New-Object System.Data.OleDb.OleDbConnection $cadenaConexion
     $con.Open()
     try {
@@ -970,6 +1464,12 @@ function Add-Esquina {
         if ([string]::IsNullOrWhiteSpace($numTrim)) { throw "Numero de territorio requerido." }
         $item = Get-TerritorioRow $numTrim $con
         $pNum = Param-OleDbNumeroTerritorio ([string]$item.numero)
+        $gpsNorm = ''
+        if (-not [string]::IsNullOrWhiteSpace($gps)) {
+            $parsed = Parse-GpsField $gps
+            if ($null -eq $parsed) { throw "GPS invalido. Usar lat,lon." }
+            $gpsNorm = [string]$parsed.gps
+        }
         $chk = $con.CreateCommand()
         if ($id2 -gt 0) {
             $chk.CommandText = "SELECT 1 FROM [RelacionTerritoriopuntosdeencuentro] WHERE [NumeroTerritorio]=? AND (([Id Calle1]=? AND [Id Calle2]=?) OR ([Id Calle1]=? AND [Id Calle2]=?))"
@@ -985,15 +1485,41 @@ function Add-Esquina {
             [void]$chk.Parameters.AddWithValue('@a1', $id1)
         }
         $exists = $chk.ExecuteScalar()
-        if ($null -ne $exists -and $exists -isnot [System.DBNull]) { return }
+        if ($null -ne $exists -and $exists -isnot [System.DBNull]) {
+            if (-not [string]::IsNullOrWhiteSpace($gpsNorm)) {
+                Set-EsquinaGpsInternal -con $con -pNum $pNum -id1 $id1 -id2 $id2 -gps $gpsNorm
+            }
+            return
+        }
 
         $cmd = $con.CreateCommand()
-        $cmd.CommandText = "INSERT INTO [RelacionTerritoriopuntosdeencuentro] ([NumeroTerritorio], [Id Calle1], [Id Calle2]) VALUES (?, ?, ?)"
+        $cmd.CommandText = "INSERT INTO [RelacionTerritoriopuntosdeencuentro] ([NumeroTerritorio], [Id Calle1], [Id Calle2], [GPS]) VALUES (?, ?, ?, ?)"
         [void]$cmd.Parameters.AddWithValue('@n', $pNum)
         [void]$cmd.Parameters.AddWithValue('@c1', $id1)
         $p = $cmd.Parameters.Add('@c2', [System.Data.OleDb.OleDbType]::Integer)
         if ($id2 -gt 0) { $p.Value = $id2 } else { $p.Value = [DBNull]::Value }
+        if ([string]::IsNullOrWhiteSpace($gpsNorm)) {
+            [void]$cmd.Parameters.AddWithValue('@g', [DBNull]::Value)
+        } else {
+            [void]$cmd.Parameters.AddWithValue('@g', $gpsNorm)
+        }
         [void]$cmd.ExecuteNonQuery()
+    }
+    finally { $con.Close() }
+}
+
+function Set-EsquinaGps {
+    param([string]$numero, [int]$id1, [int]$id2, [string]$gps)
+    $con = New-Object System.Data.OleDb.OleDbConnection $cadenaConexion
+    $con.Open()
+    try {
+        $numTrim = Normalize-NumeroTerritorio $numero
+        if ([string]::IsNullOrWhiteSpace($numTrim)) { throw "Numero de territorio requerido." }
+        $item = Get-TerritorioRow $numTrim $con
+        $pNum = Param-OleDbNumeroTerritorio ([string]$item.numero)
+        $parsed = Parse-GpsField $gps
+        if ($null -eq $parsed) { throw "GPS invalido. Usar lat,lon." }
+        Set-EsquinaGpsInternal -con $con -pNum $pNum -id1 $id1 -id2 $id2 -gps ([string]$parsed.gps)
     }
     finally { $con.Close() }
 }
@@ -1186,6 +1712,7 @@ function Get-TerritorioRow {
                 enviado = $rd['Enviado']
                 asignado = $rd['Asignado']
                 responsables = $rd['Responsables']
+                ultimoEncargado = $rd['UltimoEncargado']
             }
             $rd.Close()
             return $item
@@ -1204,6 +1731,7 @@ function Get-TerritorioRow {
             enviado = $rd['Enviado']
             asignado = $rd['Asignado']
             responsables = $rd['Responsables']
+            ultimoEncargado = $rd['UltimoEncargado']
         }
         $rd.Close()
         return $item
@@ -1446,6 +1974,8 @@ function Close-TerritorioConAccion {
         $enviadoObj = $item.enviado
         $asignadoObj = $item.asignado
         $responsablesObj = $item.responsables
+        $ultimoEncargadoObj = $item.ultimoEncargado
+        $encargadoHistorial = Merge-EncargadoNombres $ultimoEncargadoObj $responsablesObj
 
         switch ($accion) {
             'completado' {
@@ -1469,7 +1999,7 @@ function Close-TerritorioConAccion {
                 [void]$cmdUp.Parameters.AddWithValue('@num', $numeroTxt)
                 [void]$cmdUp.ExecuteNonQuery()
 
-                Add-HistorialSingleFromTerritorio $numero $enviadoObj $asignadoObj $responsablesObj $con
+                Add-HistorialSingleFromTerritorio $numero $enviadoObj $asignadoObj $encargadoHistorial $con
                 return [ordered]@{ ok = $true; numero = $numero; accion = 'completado' }
             }
             'completado-campana' {
@@ -1483,7 +2013,7 @@ function Close-TerritorioConAccion {
                 [void]$cmdUp.Parameters.AddWithValue('@num', $numeroTxt)
                 [void]$cmdUp.ExecuteNonQuery()
 
-                Add-HistorialSingleFromTerritorio $numero $enviadoObj $asignadoObj $responsablesObj $con
+                Add-HistorialSingleFromTerritorio $numero $enviadoObj $asignadoObj $encargadoHistorial $con
                 return [ordered]@{ ok = $true; numero = $numero; accion = 'completado-campana' }
             }
             'incompleto' {
@@ -1492,7 +2022,8 @@ function Close-TerritorioConAccion {
                 }
 
                 $fechaRefObj = if ($enviadoObj -is [System.DBNull] -or $null -eq $enviadoObj) { [datetime]::Today } else { [datetime]$enviadoObj }
-                $encargado = if ($responsablesObj -is [System.DBNull] -or $null -eq $responsablesObj) { [DBNull]::Value } else { [string]$responsablesObj }
+                $encargadoAcum = Merge-EncargadoNombres $ultimoEncargadoObj $responsablesObj
+                if ([string]::IsNullOrWhiteSpace($encargadoAcum)) { $encargadoAcum = [DBNull]::Value }
 
                 $sql = "UPDATE NumeroDeTerritorios SET " +
                        "AbiertoCerrado=False, Enviado=Null, PuntosDeEncuentros=Null, Grupos=Null, Responsables=Null, Prioridad=Null, " +
@@ -1503,7 +2034,7 @@ function Close-TerritorioConAccion {
                 [void]$cmdUp.Parameters.AddWithValue('@mp', $manzanasTexto)
                 $pFecha = $cmdUp.Parameters.Add('@fmp', [System.Data.OleDb.OleDbType]::Date)
                 $pFecha.Value = $fechaRefObj
-                [void]$cmdUp.Parameters.AddWithValue('@ue', $encargado)
+                [void]$cmdUp.Parameters.AddWithValue('@ue', $encargadoAcum)
                 [void]$cmdUp.Parameters.AddWithValue('@num', $numeroTxt)
                 [void]$cmdUp.ExecuteNonQuery()
 
@@ -1691,7 +2222,7 @@ function Execute-AgregadoAccion {
     $con.Open()
     try {
         $cmdChk = $con.CreateCommand()
-        $cmdChk.CommandText = "SELECT TOP 1 NumeroTerritorio FROM NumeroDeTerritorios WHERE CStr(NumeroTerritorio)=?"
+        $cmdChk.CommandText = "SELECT TOP 1 NumeroTerritorio, UltimoEncargado FROM NumeroDeTerritorios WHERE CStr(NumeroTerritorio)=?"
         [void]$cmdChk.Parameters.AddWithValue('@n', $numeroTxt)
         $rd = $cmdChk.ExecuteReader()
         if (-not $rd.Read()) {
@@ -1699,7 +2230,9 @@ function Execute-AgregadoAccion {
             throw "No se encontro el territorio $numeroTxt."
         }
         $numero = [string]$rd['NumeroTerritorio']
+        $ultimoEncargadoObj = $rd['UltimoEncargado']
         $rd.Close()
+        $encargadoHistorial = Merge-EncargadoNombres $ultimoEncargadoObj $responsableTxt
 
         switch ($accion) {
             'completado' {
@@ -1707,7 +2240,7 @@ function Execute-AgregadoAccion {
                 $cmdIns.CommandText = "INSERT INTO Historial (NumeroTerritorio, Terminado, Encargado, Iniciado) VALUES (?, ?, ?, ?)"
                 [void]$cmdIns.Parameters.AddWithValue('@n', $numero)
                 $pT = $cmdIns.Parameters.Add('@t', [System.Data.OleDb.OleDbType]::Date); $pT.Value = $fechaRef
-                [void]$cmdIns.Parameters.AddWithValue('@e', $responsableTxt)
+                [void]$cmdIns.Parameters.AddWithValue('@e', $encargadoHistorial)
                 $pI = $cmdIns.Parameters.Add('@i', [System.Data.OleDb.OleDbType]::Date); $pI.Value = $fechaRef
                 [void]$cmdIns.ExecuteNonQuery()
                 return [ordered]@{ ok = $true; numero = $numero; accion = 'completado' }
@@ -1723,7 +2256,7 @@ function Execute-AgregadoAccion {
                 $cmdIns.CommandText = "INSERT INTO Historial (NumeroTerritorio, Terminado, Encargado, Iniciado) VALUES (?, ?, ?, ?)"
                 [void]$cmdIns.Parameters.AddWithValue('@n', $numero)
                 $pT = $cmdIns.Parameters.Add('@t', [System.Data.OleDb.OleDbType]::Date); $pT.Value = $fechaRef
-                [void]$cmdIns.Parameters.AddWithValue('@e', $responsableTxt)
+                [void]$cmdIns.Parameters.AddWithValue('@e', $encargadoHistorial)
                 $pI = $cmdIns.Parameters.Add('@i', [System.Data.OleDb.OleDbType]::Date); $pI.Value = $fechaRef
                 [void]$cmdIns.ExecuteNonQuery()
                 return [ordered]@{ ok = $true; numero = $numero; accion = 'completado-campana' }
@@ -1732,12 +2265,14 @@ function Execute-AgregadoAccion {
                 if ([string]::IsNullOrWhiteSpace($manzanasTexto)) {
                     throw "Para incompleto debe ingresar Manzanas Pendientes."
                 }
+                $encargadoAcum = $encargadoHistorial
+                if ([string]::IsNullOrWhiteSpace($encargadoAcum)) { $encargadoAcum = [DBNull]::Value }
                 $cmdUp = $con.CreateCommand()
                 $cmdUp.CommandText = "UPDATE NumeroDeTerritorios SET AbiertoCerrado=False, Enviado=Null, PuntosDeEncuentros=Null, Grupos=Null, Responsables=Null, Prioridad=Null, Asignado=IIf(IsNull(Asignado), ?, Asignado), ManzanasPendientes=?, FechaManzanasPendientes=?, UltimoEncargado=? WHERE CStr(NumeroTerritorio)=?"
                 $pA = $cmdUp.Parameters.Add('@a', [System.Data.OleDb.OleDbType]::Date); $pA.Value = $fechaRef
                 [void]$cmdUp.Parameters.AddWithValue('@mp', $manzanasTexto)
                 $pF = $cmdUp.Parameters.Add('@f', [System.Data.OleDb.OleDbType]::Date); $pF.Value = $fechaRef
-                [void]$cmdUp.Parameters.AddWithValue('@u', $responsableTxt)
+                [void]$cmdUp.Parameters.AddWithValue('@u', $encargadoAcum)
                 [void]$cmdUp.Parameters.AddWithValue('@n', $numeroTxt)
                 [void]$cmdUp.ExecuteNonQuery()
                 return [ordered]@{ ok = $true; numero = $numero; accion = 'incompleto' }
@@ -2031,6 +2566,26 @@ try {
                 $datos = Read-Historial $n
                 Write-Json $resp $datos
             }
+            elseif ($ruta -eq '/api/s13' -and $req.HttpMethod -eq 'GET') {
+                $anioTxt = $req.QueryString['anio']
+                $anio = 0
+                if ([string]::IsNullOrWhiteSpace($anioTxt)) {
+                    $anio = Get-AnioServicioActual
+                } elseif (-not [int]::TryParse([string]$anioTxt, [ref]$anio)) {
+                    throw "Parametro anio invalido."
+                }
+                $datos = Read-S13 $anio
+                Write-Json $resp $datos
+            }
+            elseif ($ruta -eq '/api/esquinas/gps' -and ($req.HttpMethod -eq 'PUT' -or $req.HttpMethod -eq 'POST')) {
+                $body = Read-JsonBody $req
+                $nTerr = Normalize-NumeroTerritorio $body.numero
+                $gpsVal = Normalize-GpsFromBody $body
+                if ([string]::IsNullOrWhiteSpace($gpsVal)) { throw "GPS requerido: marque el punto en el mapa." }
+                Set-EsquinaGps $nTerr ([int]$body.id1) ([int]$body.id2) $gpsVal
+                $datos = Read-Esquinas $nTerr
+                Write-Json $resp $datos
+            }
             elseif ($ruta -match '^/api/esquinas/(.+)$' -and $req.HttpMethod -eq 'GET') {
                 $n = [Uri]::UnescapeDataString($Matches[1]).Trim()
                 $datos = Read-Esquinas $n
@@ -2039,7 +2594,9 @@ try {
             elseif ($ruta -eq '/api/esquinas' -and $req.HttpMethod -eq 'POST') {
                 $body = Read-JsonBody $req
                 $nTerr = Normalize-NumeroTerritorio $body.numero
-                Add-Esquina $nTerr ([int]$body.id1) ([int]$body.id2)
+                $gpsVal = Normalize-GpsFromBody $body
+                if ([string]::IsNullOrWhiteSpace($gpsVal)) { throw "GPS requerido: marque el punto en el mapa." }
+                Add-Esquina $nTerr ([int]$body.id1) ([int]$body.id2) $gpsVal
                 $datos = Read-Esquinas $nTerr
                 Write-Json $resp $datos
             }
